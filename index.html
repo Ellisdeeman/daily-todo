@@ -67,10 +67,16 @@ ul.items li:last-child{border-bottom:0}
 li.done .item-title{text-decoration:line-through;color:var(--muted)}
 .item-note{color:var(--muted);font-size:.88rem}
 .time{font-variant-numeric:tabular-nums;font-weight:650;color:var(--muted);font-size:.92rem;min-width:70px}
-.tag{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:99px;flex:none}
+.tag{white-space:nowrap;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:99px;flex:none}
 .tag.plan{background:color-mix(in srgb,var(--plan) 15%,transparent);color:var(--plan)}
 .tag.chore{background:color-mix(in srgb,var(--chore) 18%,transparent);color:var(--chore)}
 .tag.exercise{background:color-mix(in srgb,var(--ex) 15%,transparent);color:var(--ex)}
+.tag.missed{background:color-mix(in srgb,var(--chore) 22%,transparent);color:color-mix(in srgb,var(--chore) 75%,var(--text))}
+ul.items li.overdue{background:color-mix(in srgb,var(--chore) 9%,transparent);border-left-color:var(--chore);border-radius:8px}
+ul.items li.overdue .time{color:var(--chore);font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
+ul.items li.overdue .item-note{color:color-mix(in srgb,var(--chore) 70%,var(--text));font-weight:600}
+ul.items li.overdue.done{background:transparent}
+ul.items li.overdue+li:not(.overdue){margin-top:6px}
 .tag.task{background:color-mix(in srgb,var(--task) 15%,transparent);color:var(--task)}
 .empty{color:var(--muted);text-align:center;padding:24px 8px}
 .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -240,7 +246,7 @@ ul.items li.k-task{border-left-color:color-mix(in srgb,var(--task) 60%,transpare
   <section id="view-chores" role="tabpanel" aria-labelledby="tab-chores" hidden>
     <div class="card">
       <h2>Recurring chores</h2>
-      <p class="muted" style="margin-top:-6px">Chores appear on the Today view only on the weekdays you pick.</p>
+      <p class="muted" style="margin-top:-6px">Chores appear on the Today view only on the weekdays you pick. A missed chore rolls over to the next days as <b>Overdue</b> until it’s done — everything resets on Monday.</p>
       <div id="choreList"></div>
       <button class="btn primary" id="addChore">+ Add chore</button>
     </div>
@@ -309,9 +315,9 @@ function seed(){
   plan[0]=[p('10:00','Example: Weekly review & plan ahead'),p('17:00','Example: Meal prep')];
   return {version:1,plan,
     chores:[
-      {id:uid(),title:'Example: Take out trash',days:[2,5],time:'19:00'},
-      {id:uid(),title:'Example: Water plants',days:[1,4],time:''},
-      {id:uid(),title:'Example: Make bed',days:[0,1,2,3,4,5,6],time:''}
+      {id:uid(),title:'Example: Take out trash',days:[2,5],time:'19:00',createdAt:ymd(new Date())},
+      {id:uid(),title:'Example: Water plants',days:[1,4],time:'',createdAt:ymd(new Date())},
+      {id:uid(),title:'Example: Make bed',days:[0,1,2,3,4,5,6],time:'',createdAt:ymd(new Date())}
     ],
     exercises:[{id:uid(),title:'Example: 20-min walk',days:[1,3,5],time:'17:30',note:'Brisk pace'}],
     notes:[],dayNotes:{},tasks:{},done:{},theme:'auto',hintDismissed:false};
@@ -323,7 +329,7 @@ function normalize(d){
   out.hintDismissed=!!d.hintDismissed;
   out.theme=['auto','light','dark'].includes(d.theme)?d.theme:'auto';
   for(let i=0;i<7;i++) out.plan[i]=Array.isArray(d.plan&&d.plan[i])?d.plan[i].filter(x=>x&&x.title).map(x=>({id:x.id||uid(),time:x.time||'',title:String(x.title),note:x.note?String(x.note):''})):[];
-  out.chores=Array.isArray(d.chores)?d.chores.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||''})):[];
+  out.chores=Array.isArray(d.chores)?d.chores.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||'',createdAt:/^\d{4}-\d{2}-\d{2}$/.test(c.createdAt)?c.createdAt:ymd(new Date())})):[];
   out.exercises=Array.isArray(d.exercises)?d.exercises.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||'',note:c.note?String(c.note):''})):[];
   out.notes=Array.isArray(d.notes)?d.notes.filter(n=>n&&typeof n==='object').map(n=>({id:n.id||uid(),title:n.title?String(n.title):'',body:n.body?String(n.body):'',updated:Number(n.updated)||Date.now()})):[];
   out.dayNotes={};if(d.dayNotes&&typeof d.dayNotes==='object')for(const k in d.dayNotes){if(/^\d{4}-\d{2}-\d{2}$/.test(k)&&typeof d.dayNotes[k]==='string'&&d.dayNotes[k])out.dayNotes[k]=d.dayNotes[k];}
@@ -379,7 +385,35 @@ function itemsFor(dateStr){
   S.chores.filter(c=>c.days.includes(wd)).forEach(c=>out.push({key:'chore:'+c.id,kind:'chore',time:c.time,title:c.title,note:''}));
   S.exercises.filter(c=>c.days.includes(wd)).forEach(c=>out.push({key:'exercise:'+c.id,kind:'exercise',time:c.time,title:c.title,note:c.note||''}));
   (S.tasks[dateStr]||[]).forEach(t=>out.push({key:'task:'+t.id,kind:'task',time:t.time,title:t.title,note:'',id:t.id}));
-  return out.map((x,i)=>({...x,_i:i})).sort((a,b)=>byTime(a,b)||a._i-b._i);
+  const done=S.done[dateStr]||{};out.forEach(x=>x.done=!!done[x.key]);
+  const sorted=out.map((x,i)=>({...x,_i:i})).sort((a,b)=>byTime(a,b)||a._i-b._i);
+  return overdueFor(dateStr).concat(sorted);
+}
+// ---------- CHORE ROLLOVER (computed, never mutates history) ----------
+// Week = Mon..Sun. Undone chore occurrences from earlier days of the same week (only days already past,
+// and not before the chore was created) roll forward, collapsed to one line per chore. Mondays start clean.
+function missedDates(c,dateStr){
+  const D=parseYmd(dateStr),todayStr=ymd(new Date());
+  const end=dateStr<todayStr?dateStr:todayStr; // only truly past days count as missed
+  const start=new Date(D);start.setDate(D.getDate()-((D.getDay()+6)%7)); // Monday of D's week
+  const out=[];
+  for(const x=new Date(start);ymd(x)<end;x.setDate(x.getDate()+1)){
+    const xs=ymd(x);if(c.createdAt&&xs<c.createdAt)continue;
+    if(c.days.includes(x.getDay())&&!(S.done[xs]&&S.done[xs]['chore:'+c.id]))out.push(xs);
+  }
+  return out;
+}
+function missLabel(dates){const n=dates.map(d=>SHORT[parseYmd(d).getDay()]);return dates.length===1?'Missed · from '+n[0]:`Missed ${dates.length} days · ${n.join(', ')}`;}
+function overdueFor(dateStr){
+  const out=[],rec=S.done[dateStr]||{};
+  S.chores.forEach(c=>{
+    // cleared here earlier: keep showing it checked on this day (so it can be unticked)
+    const r=Array.isArray(rec['rolled:'+c.id])?rec['rolled:'+c.id].filter(d=>S.done[d]&&S.done[d]['chore:'+c.id]):[];
+    if(r.length)out.push({key:'rolled:'+c.id,kind:'missed',overdue:true,done:true,title:c.title,note:missLabel(r),dates:r,cid:c.id,time:''});
+    const m=missedDates(c,dateStr);
+    if(m.length)out.push({key:'missed:'+c.id,kind:'missed',overdue:true,done:false,title:c.title,note:missLabel(m),dates:m,cid:c.id,time:''});
+  });
+  return out;
 }
 function renderToday(){
   const d=parseYmd(cur),todayStr=ymd(new Date());
@@ -389,22 +423,31 @@ function renderToday(){
   $('#daySub').textContent=d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   $('#todayBtn').disabled=diff===0;
   renderDayNote();
-  const items=itemsFor(cur),done=S.done[cur]||{};
-  const n=items.length,k=items.filter(i=>done[i.key]).length,pct=n?Math.round(k/n*100):0;
+  const items=itemsFor(cur);
+  const n=items.length,k=items.filter(i=>i.done).length,pct=n?Math.round(k/n*100):0;
   $('#bar').firstElementChild.style.width=pct+'%';$('#bar').setAttribute('aria-valuenow',pct);
   $('#countText').textContent=`${k} of ${n} done`+(n&&k===n?' — all done! 🎉':'');$('#pctText').textContent=pct+'%';
   const ul=$('#itemList');
   if(!n){ul.innerHTML='<li class="empty">Nothing planned for this day. Add a task above.</li>';return;}
-  ul.innerHTML=items.map(i=>{const cid='c_'+i.key.replace(':','_');return `<li class="k-${i.kind} ${done[i.key]?'done':''}" data-key="${esc(i.key)}">
-    <input type="checkbox" class="chk" id="${cid}" ${done[i.key]?'checked':''} aria-label="${esc(i.title)}">
-    <span class="time">${i.time?fmtTime(i.time):'—'}</span>
+  ul.innerHTML=items.map(i=>{const cid='c_'+i.key.replace(':','_');return `<li class="k-${i.kind} ${i.overdue?'overdue':''} ${i.done?'done':''}" data-key="${esc(i.key)}">
+    <input type="checkbox" class="chk" id="${cid}" ${i.done?'checked':''} aria-label="${esc(i.title)}${i.overdue?' ('+esc(i.note)+')':''}">
+    <span class="time">${i.overdue?'Overdue':i.time?fmtTime(i.time):'—'}</span>
     <label class="item-main" for="${cid}"><div class="item-title">${esc(i.title)}</div>${i.note?`<div class="item-note">${esc(i.note)}</div>`:''}</label>
-    <span class="tag ${i.kind}">${i.kind}</span>
+    <span class="tag ${i.kind}">${i.overdue?'Missed chore':i.kind}</span>
     ${i.kind==='task'?`<button class="icon-btn del-task" data-id="${esc(i.id)}" aria-label="Delete task ${esc(i.title)}">✕</button>`:'<span class="spacer" style="width:44px;flex:none" aria-hidden="true"></span>'}
   </li>`;}).join('');
 }
-$('#itemList').addEventListener('change',e=>{if(!e.target.classList.contains('chk'))return;const key=e.target.closest('li').dataset.key;
-  S.done[cur]=S.done[cur]||{};if(e.target.checked)S.done[cur][key]=true;else delete S.done[cur][key];
+$('#itemList').addEventListener('change',e=>{if(!e.target.classList.contains('chk'))return;let key=e.target.closest('li').dataset.key;
+  S.done[cur]=S.done[cur]||{};
+  if(/^(missed|rolled):/.test(key)){const id=key.split(':')[1],c=S.chores.find(x=>x.id===id);const it=itemsFor(cur).find(x=>x.key===key);
+    if(c&&it){const ck='chore:'+id;
+      if(e.target.checked){it.dates.forEach(d=>{(S.done[d]=S.done[d]||{})[ck]=true;});
+        const prev=Array.isArray(S.done[cur]['rolled:'+id])?S.done[cur]['rolled:'+id]:[];S.done[cur]['rolled:'+id]=[...new Set([...prev,...it.dates])].sort();key='rolled:'+id;
+        toast(it.dates.length>1?`Marked ${it.dates.length} missed days done`:'Marked done for '+SHORT[parseYmd(it.dates[0]).getDay()]);}
+      else{it.dates.forEach(d=>{if(S.done[d]){delete S.done[d][ck];if(!Object.keys(S.done[d]).length&&d!==cur)delete S.done[d];}});
+        delete S.done[cur]['rolled:'+id];key='missed:'+id;}
+    }}
+  else if(e.target.checked)S.done[cur][key]=true;else delete S.done[cur][key];
   if(!Object.keys(S.done[cur]).length)delete S.done[cur];save();renderToday();
   const el=document.getElementById('c_'+key.replace(':','_'));el&&el.focus();});
 $('#itemList').addEventListener('click',e=>{const b=e.target.closest('.del-task');if(!b)return;
@@ -510,7 +553,7 @@ Object.keys(REC).forEach(kind=>{const R=REC[kind];const find=id=>S[R.store].find
       const nb=$(R.list).querySelector(`[data-id="${c.id}"] [data-a="${b.dataset.a}"]`);const fb=$(R.list).querySelector(`[data-id="${c.id}"] [data-a="${b.dataset.a==='up'?'down':'up'}"]`);
       ((nb&&!nb.disabled)?nb:fb).focus();return;}
     save();renderRec(kind);renderHint();});
-  $(R.add).onclick=()=>{const item={id:uid(),title:'New '+R.noun,days:[],time:''};if(R.note)item.note='';S[R.store].push(item);save();renderRec(kind);
+  $(R.add).onclick=()=>{const item={id:uid(),title:'New '+R.noun,days:[],time:''};if(R.note)item.note='';if(kind==='chore')item.createdAt=ymd(new Date());S[R.store].push(item);save();renderRec(kind);
     const inp=$(R.list).lastElementChild.querySelector('input[data-f=title]');inp.focus();inp.select();};
 });
 
