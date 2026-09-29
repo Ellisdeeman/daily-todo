@@ -8,13 +8,13 @@
 :root{
   --bg:#f5f6fa;--card:#fff;--text:#1d2330;--muted:#6b7385;--line:#e3e6ee;
   --accent:#4f6ef7;--accent-2:#eef1fe;--ok:#1fa971;--danger:#d64545;
-  --plan:#4f6ef7;--chore:#e08a1e;--task:#8b5cf6;--shadow:0 1px 3px rgba(20,30,60,.08),0 4px 16px rgba(20,30,60,.05);
+  --plan:#4f6ef7;--chore:#e08a1e;--task:#8b5cf6;--ex:#e0245e;--shadow:0 1px 3px rgba(20,30,60,.08),0 4px 16px rgba(20,30,60,.05);
   --radius:14px;
 }
 [data-theme="dark"]{
   --bg:#12151c;--card:#1b2029;--text:#e7eaf1;--muted:#98a0b3;--line:#2c3340;
   --accent:#7c93ff;--accent-2:#252c44;--ok:#35c98b;--danger:#f06a6a;
-  --plan:#7c93ff;--chore:#f0a543;--task:#a78bfa;--shadow:0 1px 3px rgba(0,0,0,.4);
+  --plan:#7c93ff;--chore:#f0a543;--task:#a78bfa;--ex:#fb5a8a;--shadow:0 1px 3px rgba(0,0,0,.4);
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -69,6 +69,7 @@ li.done .item-title{text-decoration:line-through;color:var(--muted)}
 .tag{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:99px;flex:none}
 .tag.plan{background:color-mix(in srgb,var(--plan) 15%,transparent);color:var(--plan)}
 .tag.chore{background:color-mix(in srgb,var(--chore) 18%,transparent);color:var(--chore)}
+.tag.exercise{background:color-mix(in srgb,var(--ex) 15%,transparent);color:var(--ex)}
 .tag.task{background:color-mix(in srgb,var(--task) 15%,transparent);color:var(--task)}
 .empty{color:var(--muted);text-align:center;padding:24px 8px}
 .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -89,6 +90,7 @@ h2{font-size:1.1rem;margin:0 0 12px}
 .pill input{position:absolute;opacity:0;width:1px;height:1px}
 .pill span{display:inline-flex;align-items:center;justify-content:center;min-width:48px;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:99px;cursor:pointer;font-weight:600;font-size:.9rem;user-select:none}
 .pill input:checked+span{background:var(--chore);border-color:var(--chore);color:#fff}
+.rec-exercise .pill input:checked+span{background:var(--ex);border-color:var(--ex)}
 .chore-card{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;display:grid;gap:10px}
 .chore-top{display:grid;grid-template-columns:1fr 150px auto;gap:8px;align-items:center}
 @media (max-width:560px){.chore-top{grid-template-columns:1fr auto}.chore-top input[data-f=title]{grid-column:1/-1}}
@@ -100,12 +102,15 @@ h2{font-size:1.1rem;margin:0 0 12px}
 ul.items li{border-left:4px solid transparent;padding-left:4px}
 ul.items li.k-plan{border-left-color:color-mix(in srgb,var(--plan) 55%,transparent)}
 ul.items li.k-chore{border-left-color:color-mix(in srgb,var(--chore) 70%,transparent)}
+ul.items li.k-exercise{border-left-color:color-mix(in srgb,var(--ex) 65%,transparent)}
 ul.items li.k-task{border-left-color:color-mix(in srgb,var(--task) 60%,transparent)}
 @media (max-width:560px){
   .wrap{padding:10px 10px 64px}
   header.top{gap:8px}
   nav.tabs{width:100%;flex-wrap:nowrap}
-  nav.tabs button{flex:1;padding:10px 6px;font-size:.9rem}
+  nav.tabs{overflow-x:auto;scrollbar-width:none}
+  nav.tabs button{flex:1 0 auto;padding:10px 8px;font-size:.88rem}
+  nav.tabs .lg{display:none}
   .brand{flex:1}
   header.top>.row{width:100%;flex-wrap:nowrap}
   .card{padding:14px}
@@ -130,8 +135,9 @@ ul.items li.k-task{border-left-color:color-mix(in srgb,var(--task) 60%,transpare
     <div class="row">
       <nav class="tabs" role="tablist" aria-label="Views">
         <button role="tab" id="tab-today" aria-controls="view-today" aria-selected="true" data-view="today">Today</button>
-        <button role="tab" id="tab-plan" aria-controls="view-plan" aria-selected="false" data-view="plan">Weekly Plan</button>
+        <button role="tab" id="tab-plan" aria-controls="view-plan" aria-selected="false" data-view="plan"><span class="lg">Weekly </span>Plan</button>
         <button role="tab" id="tab-chores" aria-controls="view-chores" aria-selected="false" data-view="chores">Chores</button>
+        <button role="tab" id="tab-exercise" aria-controls="view-exercise" aria-selected="false" data-view="exercise">Exercise</button>
         <button role="tab" id="tab-data" aria-controls="view-data" aria-selected="false" data-view="data">Data</button>
       </nav>
       <button class="icon-btn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">◐</button>
@@ -139,7 +145,7 @@ ul.items li.k-task{border-left-color:color-mix(in srgb,var(--task) 60%,transpare
   </header>
 
   <div class="hint" id="exampleHint" hidden>
-    <span>👋 Items marked <b>“Example:”</b> are samples — edit or delete them in <b>Weekly Plan</b> and <b>Chores</b>.</span>
+    <span>👋 Items marked <b>“Example:”</b> are samples — edit or delete them in <b>Weekly Plan</b>, <b>Chores</b> and <b>Exercise</b>.</span>
     <button class="btn small" id="clearExamples">Remove examples</button>
   </div>
 
@@ -173,7 +179,7 @@ ul.items li.k-task{border-left-color:color-mix(in srgb,var(--task) 60%,transpare
     </div>
     <div class="card">
       <ul class="items" id="itemList" aria-label="Items for this day"></ul>
-      <div class="legend"><span class="tag plan">Plan</span><span class="tag chore">Chore</span><span class="tag task">Task</span></div>
+      <div class="legend"><span class="tag plan">Plan</span><span class="tag chore">Chore</span><span class="tag exercise">Exercise</span><span class="tag task">Task</span></div>
     </div>
   </section>
 
@@ -217,6 +223,16 @@ ul.items li.k-task{border-left-color:color-mix(in srgb,var(--task) 60%,transpare
       <p class="muted" style="margin-top:-6px">Chores appear on the Today view only on the weekdays you pick.</p>
       <div id="choreList"></div>
       <button class="btn primary" id="addChore">+ Add chore</button>
+    </div>
+  </section>
+
+  <!-- EXERCISE -->
+  <section id="view-exercise" role="tabpanel" aria-labelledby="tab-exercise" hidden>
+    <div class="card">
+      <h2>Exercise</h2>
+      <p class="muted" style="margin-top:-6px">Workouts appear on the Today view only on the weekdays you pick. Use the note for sets, reps or duration.</p>
+      <div id="exerciseList"></div>
+      <button class="btn primary" id="addExercise">+ Add exercise</button>
     </div>
   </section>
 
@@ -266,9 +282,10 @@ function seed(){
       {id:uid(),title:'Example: Water plants',days:[1,4],time:''},
       {id:uid(),title:'Example: Make bed',days:[0,1,2,3,4,5,6],time:''}
     ],
+    exercises:[{id:uid(),title:'Example: 20-min walk',days:[1,3,5],time:'17:30',note:'Brisk pace'}],
     tasks:{},done:{},theme:'auto',hintDismissed:false};
 }
-function blank(){return {version:1,plan:{0:[],1:[],2:[],3:[],4:[],5:[],6:[]},chores:[],tasks:{},done:{},theme:'auto',hintDismissed:true};}
+function blank(){return {version:1,plan:{0:[],1:[],2:[],3:[],4:[],5:[],6:[]},chores:[],exercises:[],tasks:{},done:{},theme:'auto',hintDismissed:true};}
 function normalize(d){
   if(!d||typeof d!=='object') throw new Error('Invalid data');
   const out=blank();
@@ -276,6 +293,7 @@ function normalize(d){
   out.theme=['auto','light','dark'].includes(d.theme)?d.theme:'auto';
   for(let i=0;i<7;i++) out.plan[i]=Array.isArray(d.plan&&d.plan[i])?d.plan[i].filter(x=>x&&x.title).map(x=>({id:x.id||uid(),time:x.time||'',title:String(x.title),note:x.note?String(x.note):''})):[];
   out.chores=Array.isArray(d.chores)?d.chores.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||''})):[];
+  out.exercises=Array.isArray(d.exercises)?d.exercises.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||'',note:c.note?String(c.note):''})):[];
   out.tasks=d.tasks&&typeof d.tasks==='object'?d.tasks:{};
   out.done=d.done&&typeof d.done==='object'?d.done:{};
   return out;
@@ -304,14 +322,15 @@ applyTheme();
 let view='today';
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 function showView(v){view=v;document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));
-  ['today','plan','chores','data'].forEach(x=>$('#view-'+x).hidden=x!==v);render();}
+  ['today','plan','chores','exercise','data'].forEach(x=>$('#view-'+x).hidden=x!==v);render();}
 
 // ---------- example hint ----------
-function hasExamples(){return Object.values(S.plan).some(l=>l.some(i=>/^Example:/i.test(i.title)))||S.chores.some(c=>/^Example:/i.test(c.title));}
+function hasExamples(){return Object.values(S.plan).some(l=>l.some(i=>/^Example:/i.test(i.title)))||S.chores.some(c=>/^Example:/i.test(c.title))||S.exercises.some(c=>/^Example:/i.test(c.title));}
 function renderHint(){$('#exampleHint').hidden=!hasExamples();}
 $('#clearExamples').onclick=()=>{if(!confirm('Remove all items whose title starts with "Example:"?'))return;
   for(let i=0;i<7;i++)S.plan[i]=S.plan[i].filter(x=>!/^Example:/i.test(x.title));
-  S.chores=S.chores.filter(c=>!/^Example:/i.test(c.title));save();render();toast('Examples removed');};
+  S.chores=S.chores.filter(c=>!/^Example:/i.test(c.title));
+  S.exercises=S.exercises.filter(c=>!/^Example:/i.test(c.title));save();render();toast('Examples removed');};
 
 // ---------- TODAY ----------
 let cur=ymd(new Date());
@@ -320,6 +339,7 @@ function itemsFor(dateStr){
   const out=[];
   (S.plan[wd]||[]).forEach(p=>out.push({key:'plan:'+p.id,kind:'plan',time:p.time,title:p.title,note:p.note}));
   S.chores.filter(c=>c.days.includes(wd)).forEach(c=>out.push({key:'chore:'+c.id,kind:'chore',time:c.time,title:c.title,note:''}));
+  S.exercises.filter(c=>c.days.includes(wd)).forEach(c=>out.push({key:'exercise:'+c.id,kind:'exercise',time:c.time,title:c.title,note:c.note||''}));
   (S.tasks[dateStr]||[]).forEach(t=>out.push({key:'task:'+t.id,kind:'task',time:t.time,title:t.title,note:'',id:t.id}));
   return out.map((x,i)=>({...x,_i:i})).sort((a,b)=>byTime(a,b)||a._i-b._i);
 }
@@ -411,32 +431,41 @@ $('#copyBtn').onclick=()=>{const targets=[...$('#copyPills').querySelectorAll('i
   targets.forEach(d=>{const copies=S.plan[planDay].map(p=>({...p,id:uid()}));S.plan[d]=rep?copies:S.plan[d].concat(copies).sort(byTime);});
   save();renderPlan();toast('Copied to '+targets.map(d=>SHORT[d]).join(', '));};
 
-// ---------- CHORES ----------
-function renderChores(){
-  const el=$('#choreList');
-  el.innerHTML=S.chores.length?S.chores.map(c=>`<div class="chore-card" data-id="${c.id}">
+// ---------- RECURRING (chores & exercise) ----------
+const REC={
+  chore:{store:'chores',list:'#choreList',add:'#addChore',noun:'chore',Noun:'Chore',ph:'Chore name',note:false},
+  exercise:{store:'exercises',list:'#exerciseList',add:'#addExercise',noun:'exercise',Noun:'Exercise',ph:'Exercise (e.g. Push-ups)',note:true}
+};
+function renderRec(kind){
+  const R=REC[kind],arr=S[R.store],el=$(R.list);
+  el.innerHTML=arr.length?arr.map(c=>`<div class="chore-card rec-${kind}" data-id="${c.id}">
     <div class="chore-top">
-      <input type="text" value="${esc(c.title)}" data-f="title" placeholder="Chore name" aria-label="Chore name">
+      <input type="text" value="${esc(c.title)}" data-f="title" placeholder="${R.ph}" aria-label="${R.Noun} name">
       <input type="time" value="${esc(c.time)}" data-f="time" aria-label="Time (optional)">
-      <div class="acts"><button class="icon-btn" data-a="del" aria-label="Delete chore ${esc(c.title)}">✕</button></div>
+      <div class="acts"><button class="icon-btn" data-a="del" aria-label="Delete ${R.noun} ${esc(c.title)}">✕</button></div>
     </div>
+    ${R.note?`<input type="text" value="${esc(c.note||'')}" data-f="note" placeholder="Note (optional) — e.g. 3×12, 20 min, 5 km" aria-label="Note (optional)">`:''}
     <div class="pills" role="group" aria-label="Repeat on">
-      ${ORDER.map(d=>`<label class="pill"><input type="checkbox" data-day="${d}" ${c.days.includes(d)?'checked':''}><span>${SHORT[d]}</span></label>`).join('')}
+      ${ORDER.map(d=>`<label class="pill"><input type="checkbox" data-day="${d}" ${c.days.includes(d)?'checked':''} aria-label="${DAY_NAMES[d]}"><span>${SHORT[d]}</span></label>`).join('')}
       <button class="btn small" data-a="every">${c.days.length===7?'Clear days':'Every day'}</button>
     </div>
-    ${c.days.length?'':'<div class="muted" style="font-size:.88rem">⚠ No days selected — this chore won’t appear anywhere.</div>'}
-  </div>`).join(''):'<div class="empty">No chores yet.</div>';
+    ${c.days.length?'':`<div class="muted" style="font-size:.88rem">⚠ No days selected — this ${R.noun} won’t appear anywhere.</div>`}
+  </div>`).join(''):`<div class="empty">No ${R.noun==='chore'?'chores':'exercises'} yet.</div>`;
 }
-$('#choreList').addEventListener('change',e=>{const card=e.target.closest('[data-id]');if(!card)return;const c=S.chores.find(x=>x.id===card.dataset.id);
-  if(e.target.dataset.day!==undefined){const d=+e.target.dataset.day;c.days=e.target.checked?[...new Set([...c.days,d])]:c.days.filter(x=>x!==d);save();renderChores();return;}
-  const f=e.target.dataset.f;if(!f)return;let v=e.target.value;if(f==='title'){v=v.trim();if(!v){e.target.value=c.title;return;}}
-  c[f]=v;save();renderHint();toast('Saved');});
-$('#choreList').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const card=b.closest('[data-id]');const c=S.chores.find(x=>x.id===card.dataset.id);
-  if(b.dataset.a==='del'){if(!confirm(`Delete chore "${c.title}"?`))return;S.chores=S.chores.filter(x=>x!==c);toast('Chore deleted');}
-  else if(b.dataset.a==='every'){c.days=c.days.length===7?[]:[0,1,2,3,4,5,6];}
-  save();renderChores();renderHint();});
-$('#addChore').onclick=()=>{S.chores.push({id:uid(),title:'New chore',days:[],time:''});save();renderChores();
-  const inp=$('#choreList').lastElementChild.querySelector('input[data-f=title]');inp.focus();inp.select();};
+const renderChores=()=>renderRec('chore'),renderExercises=()=>renderRec('exercise');
+Object.keys(REC).forEach(kind=>{const R=REC[kind];const find=id=>S[R.store].find(x=>x.id===id);
+  $(R.list).addEventListener('change',e=>{const card=e.target.closest('[data-id]');if(!card)return;const c=find(card.dataset.id);if(!c)return;
+    if(e.target.dataset.day!==undefined){const d=+e.target.dataset.day;c.days=e.target.checked?[...new Set([...c.days,d])]:c.days.filter(x=>x!==d);save();renderRec(kind);return;}
+    const f=e.target.dataset.f;if(!f)return;let v=e.target.value;if(f==='title'){v=v.trim();if(!v){e.target.value=c.title;return;}}
+    if(f==='note')v=v.trim();
+    c[f]=v;save();renderHint();toast('Saved');});
+  $(R.list).addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const c=find(b.closest('[data-id]').dataset.id);if(!c)return;
+    if(b.dataset.a==='del'){if(!confirm(`Delete ${R.noun} "${c.title}"?`))return;S[R.store]=S[R.store].filter(x=>x!==c);toast(R.Noun+' deleted');}
+    else if(b.dataset.a==='every'){c.days=c.days.length===7?[]:[0,1,2,3,4,5,6];}
+    save();renderRec(kind);renderHint();});
+  $(R.add).onclick=()=>{const item={id:uid(),title:'New '+R.noun,days:[],time:''};if(R.note)item.note='';S[R.store].push(item);save();renderRec(kind);
+    const inp=$(R.list).lastElementChild.querySelector('input[data-f=title]');inp.focus();inp.select();};
+});
 
 // ---------- DATA ----------
 $('#exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');
@@ -448,7 +477,7 @@ $('#importFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new
 $('#resetBtn').onclick=()=>{if(!confirm('Erase ALL data and restore the example plan? This cannot be undone.'))return;S=seed();save();applyTheme();render();toast('Reset done');};
 $('#wipeBtn').onclick=()=>{if(!confirm('Erase ALL data and start completely blank? This cannot be undone.'))return;S=blank();save();applyTheme();render();toast('All data erased');};
 
-function render(){renderHint();if(view==='today')renderToday();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();}
+function render(){renderHint();if(view==='today')renderToday();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();else if(view==='exercise')renderExercises();}
 // refresh "Today" label if the tab stays open past midnight
 let lastToday=ymd(new Date());setInterval(()=>{const t=ymd(new Date());if(t!==lastToday){if(cur===lastToday)cur=t;lastToday=t;if(view==='today')renderToday();}},60000);
 render();
