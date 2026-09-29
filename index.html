@@ -35,7 +35,8 @@ nav.tabs button:focus-visible,.btn:focus-visible,.icon-btn:focus-visible,.pill i
 .btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--line))}
 .btn.small{padding:6px 12px;min-height:36px;font-size:.9rem}
 .icon-btn{border:0;background:transparent;width:44px;height:44px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.1rem}
-.icon-btn:hover{background:var(--accent-2);color:var(--text)}
+.icon-btn:disabled{opacity:.3;cursor:default}
+.icon-btn:hover:not(:disabled){background:var(--accent-2);color:var(--text)}
 input[type=text],input[type=time],textarea,select{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
 input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
 .hint{background:color-mix(in srgb,var(--chore) 14%,var(--card));border:1px solid color-mix(in srgb,var(--chore) 35%,transparent);padding:10px 14px;border-radius:10px;font-size:.92rem;margin-bottom:14px;display:flex;justify-content:space-between;gap:10px;align-items:center}
@@ -335,6 +336,7 @@ $('#clearExamples').onclick=()=>{if(!confirm('Remove all items whose title start
 // ---------- TODAY ----------
 let cur=ymd(new Date());
 function itemsFor(dateStr){
+  // Order: timed items by time; ties & untimed items keep list order: plan (plan order) → chores (Chores-tab order) → exercise (Exercise-tab order) → one-off tasks (added order).
   const wd=parseYmd(dateStr).getDay();
   const out=[];
   (S.plan[wd]||[]).forEach(p=>out.push({key:'plan:'+p.id,kind:'plan',time:p.time,title:p.title,note:p.note}));
@@ -438,11 +440,15 @@ const REC={
 };
 function renderRec(kind){
   const R=REC[kind],arr=S[R.store],el=$(R.list);
-  el.innerHTML=arr.length?arr.map(c=>`<div class="chore-card rec-${kind}" data-id="${c.id}">
+  el.innerHTML=arr.length?arr.map((c,i)=>`<div class="chore-card rec-${kind}" data-id="${c.id}">
     <div class="chore-top">
       <input type="text" value="${esc(c.title)}" data-f="title" placeholder="${R.ph}" aria-label="${R.Noun} name">
       <input type="time" value="${esc(c.time)}" data-f="time" aria-label="Time (optional)">
-      <div class="acts"><button class="icon-btn" data-a="del" aria-label="Delete ${R.noun} ${esc(c.title)}">✕</button></div>
+      <div class="acts">
+        <button class="icon-btn" data-a="up" aria-label="Move ${esc(c.title)} up" title="Move up" ${i===0?'disabled':''}>↑</button>
+        <button class="icon-btn" data-a="down" aria-label="Move ${esc(c.title)} down" title="Move down" ${i===arr.length-1?'disabled':''}>↓</button>
+        <button class="icon-btn" data-a="del" aria-label="Delete ${R.noun} ${esc(c.title)}" title="Delete">✕</button>
+      </div>
     </div>
     ${R.note?`<input type="text" value="${esc(c.note||'')}" data-f="note" placeholder="Note (optional) — e.g. 3×12, 20 min, 5 km" aria-label="Note (optional)">`:''}
     <div class="pills" role="group" aria-label="Repeat on">
@@ -462,6 +468,10 @@ Object.keys(REC).forEach(kind=>{const R=REC[kind];const find=id=>S[R.store].find
   $(R.list).addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const c=find(b.closest('[data-id]').dataset.id);if(!c)return;
     if(b.dataset.a==='del'){if(!confirm(`Delete ${R.noun} "${c.title}"?`))return;S[R.store]=S[R.store].filter(x=>x!==c);toast(R.Noun+' deleted');}
     else if(b.dataset.a==='every'){c.days=c.days.length===7?[]:[0,1,2,3,4,5,6];}
+    else if(b.dataset.a==='up'||b.dataset.a==='down'){const l=S[R.store],i=l.indexOf(c),j=b.dataset.a==='up'?i-1:i+1;if(j<0||j>=l.length)return;
+      [l[i],l[j]]=[l[j],l[i]];save();renderRec(kind);
+      const nb=$(R.list).querySelector(`[data-id="${c.id}"] [data-a="${b.dataset.a}"]`);const fb=$(R.list).querySelector(`[data-id="${c.id}"] [data-a="${b.dataset.a==='up'?'down':'up'}"]`);
+      ((nb&&!nb.disabled)?nb:fb).focus();return;}
     save();renderRec(kind);renderHint();});
   $(R.add).onclick=()=>{const item={id:uid(),title:'New '+R.noun,days:[],time:''};if(R.note)item.note='';S[R.store].push(item);save();renderRec(kind);
     const inp=$(R.list).lastElementChild.querySelector('input[data-f=title]');inp.focus();inp.select();};
