@@ -8,13 +8,13 @@
 :root{
   --bg:#f5f6fa;--card:#fff;--text:#1d2330;--muted:#6b7385;--line:#e3e6ee;
   --accent:#4f6ef7;--accent-2:#eef1fe;--ok:#1fa971;--danger:#d64545;
-  --plan:#4f6ef7;--chore:#e08a1e;--task:#8b5cf6;--ex:#e0245e;--shadow:0 1px 3px rgba(20,30,60,.08),0 4px 16px rgba(20,30,60,.05);
+  --plan:#4f6ef7;--chore:#e08a1e;--task:#8b5cf6;--ex:#e0245e;--todo:#0e9384;--shadow:0 1px 3px rgba(20,30,60,.08),0 4px 16px rgba(20,30,60,.05);
   --radius:14px;
 }
 [data-theme="dark"]{
   --bg:#12151c;--card:#1b2029;--text:#e7eaf1;--muted:#98a0b3;--line:#2c3340;
   --accent:#7c93ff;--accent-2:#252c44;--ok:#35c98b;--danger:#f06a6a;
-  --plan:#7c93ff;--chore:#f0a543;--task:#a78bfa;--ex:#fb5a8a;--shadow:0 1px 3px rgba(0,0,0,.4);
+  --plan:#7c93ff;--chore:#f0a543;--task:#a78bfa;--ex:#fb5a8a;--todo:#2dd4bf;--shadow:0 1px 3px rgba(0,0,0,.4);
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -24,7 +24,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 header.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .brand{margin-right:auto;font-weight:750;font-size:1.25rem;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
 .brand .dot{width:12px;height:12px;border-radius:50%;background:var(--accent);display:inline-block}
-nav.tabs{display:flex;gap:4px;background:var(--card);padding:4px;border-radius:12px;box-shadow:var(--shadow);flex-wrap:wrap}
+nav.tabs{position:relative;display:flex;gap:4px;background:var(--card);padding:4px;border-radius:12px;box-shadow:var(--shadow);flex-wrap:wrap}
 nav.tabs button{border:0;background:transparent;padding:10px 14px;border-radius:9px;cursor:pointer;min-height:44px;font-weight:600;color:var(--muted)}
 nav.tabs button[aria-selected="true"]{background:var(--accent);color:#fff}
 nav.tabs button:focus-visible,.btn:focus-visible,.icon-btn:focus-visible,.pill input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
@@ -70,6 +70,20 @@ li.done .item-title{text-decoration:line-through;color:var(--muted)}
 .tag{white-space:nowrap;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:99px;flex:none}
 .tag.plan{background:color-mix(in srgb,var(--plan) 15%,transparent);color:var(--plan)}
 .tag.chore{background:color-mix(in srgb,var(--chore) 18%,transparent);color:var(--chore)}
+.tag.todo{background:color-mix(in srgb,var(--todo) 16%,transparent);color:color-mix(in srgb,var(--todo) 85%,var(--text))}
+ul.items li.k-todo{background:color-mix(in srgb,var(--todo) 8%,transparent);border-left-color:var(--todo);border-radius:8px}
+ul.items li.k-todo .time{color:var(--todo);font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
+ul.items li.k-todo.done{background:transparent}
+ul.items li.k-todo+li:not(.k-todo){margin-top:6px}
+.todo-age{color:var(--muted);font-size:.84rem}
+.todo-card{border:1px solid var(--line);border-left:4px solid var(--todo);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center}
+.todo-card .fields{display:grid;gap:6px;min-width:0}
+.todo-card .note-meta{grid-column:2/-1}
+.todo-card.completed{border-left-color:var(--line);opacity:.85}
+.todo-card.completed .t{text-decoration:line-through;color:var(--muted);font-weight:600;overflow-wrap:anywhere}
+.todo-add{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:14px}
+@media (max-width:640px){.todo-add{grid-template-columns:1fr}.todo-card{grid-template-columns:auto 1fr}.todo-card .acts{grid-column:1/-1;justify-content:flex-end}.todo-card .note-meta{grid-column:1/-1}}
+details.completed summary{cursor:pointer;font-weight:650;min-height:44px;display:flex;align-items:center;gap:8px}
 .tag.exercise{background:color-mix(in srgb,var(--ex) 15%,transparent);color:var(--ex)}
 .tag.missed{background:color-mix(in srgb,var(--chore) 22%,transparent);color:color-mix(in srgb,var(--chore) 75%,var(--text))}
 ul.items li.overdue{background:color-mix(in srgb,var(--chore) 9%,transparent);border-left-color:var(--chore);border-radius:8px}
@@ -128,7 +142,7 @@ ul.items li.k-task{border-left-color:color-mix(in srgb,var(--task) 60%,transpare
   header.top{gap:8px}
   nav.tabs{width:100%;flex-wrap:nowrap}
   nav.tabs{overflow-x:auto;scrollbar-width:none}
-  nav.tabs{order:3}
+  nav.tabs{order:3;scroll-behavior:smooth;scroll-padding:0 24px}
   nav.tabs button{flex:1 0 auto;padding:10px 6px;font-size:.86rem}
   nav.tabs::-webkit-scrollbar{display:none}
   nav.tabs .lg{display:none}
@@ -154,6 +168,7 @@ ul.items li.k-task{border-left-color:color-mix(in srgb,var(--task) 60%,transpare
     <div class="brand"><span class="dot" aria-hidden="true"></span>Daily To-Do</div>
     <nav class="tabs" role="tablist" aria-label="Views">
         <button role="tab" id="tab-today" aria-controls="view-today" aria-selected="true" data-view="today">Today</button>
+        <button role="tab" id="tab-todo" aria-controls="view-todo" aria-selected="false" data-view="todo">To-Do</button>
         <button role="tab" id="tab-plan" aria-controls="view-plan" aria-selected="false" data-view="plan"><span class="lg">Weekly </span>Plan</button>
         <button role="tab" id="tab-chores" aria-controls="view-chores" aria-selected="false" data-view="chores">Chores</button>
         <button role="tab" id="tab-exercise" aria-controls="view-exercise" aria-selected="false" data-view="exercise">Exercise</button>
@@ -198,13 +213,32 @@ ul.items li.k-task{border-left-color:color-mix(in srgb,var(--task) 60%,transpare
     </div>
     <div class="card">
       <ul class="items" id="itemList" aria-label="Items for this day"></ul>
-      <div class="legend"><span class="tag plan">Plan</span><span class="tag chore">Chore</span><span class="tag exercise">Exercise</span><span class="tag task">Task</span></div>
+      <div class="legend"><span class="tag todo">To-Do</span><span class="tag plan">Plan</span><span class="tag chore">Chore</span><span class="tag exercise">Exercise</span><span class="tag task">Task</span></div>
     </div>
     <div class="card">
       <details class="daynote" id="dayNoteBox">
         <summary><span id="dayNoteSummary">Notes for this day</span><span class="dot-has" id="dayNoteDot" hidden aria-hidden="true"></span><span class="savestate" id="dayNoteState" aria-live="polite"></span></summary>
         <label class="sr-only" for="dayNote">Notes for this day</label>
         <textarea id="dayNote" placeholder="Anything to remember for this day…" style="margin-top:8px"></textarea>
+      </details>
+    </div>
+  </section>
+
+  <!-- TO-DO -->
+  <section id="view-todo" role="tabpanel" aria-labelledby="tab-todo" hidden>
+    <div class="card">
+      <h2>To-Do</h2>
+      <p class="muted" style="margin-top:-6px">One-time tasks (like “Get an oil change”). They stay at the top of your Today list every day until you finish them. Use ↑ ↓ to set priority.</p>
+      <form class="todo-add" id="todoAddForm" autocomplete="off">
+        <input type="text" id="todoTitle" placeholder="New to-do…" aria-label="New to-do" required>
+        <input type="text" id="todoNote" placeholder="Note (optional)" aria-label="Note (optional)">
+        <button class="btn primary" type="submit">Add</button>
+      </form>
+      <div id="todoList"></div>
+      <details class="completed" id="todoDoneBox" hidden>
+        <summary><span id="todoDoneSummary">Completed</span></summary>
+        <div id="todoDoneList" style="margin-top:8px"></div>
+        <button class="btn danger small" id="clearDoneTodos">Clear completed</button>
       </details>
     </div>
   </section>
@@ -320,9 +354,9 @@ function seed(){
       {id:uid(),title:'Example: Make bed',days:[0,1,2,3,4,5,6],time:'',createdAt:ymd(new Date())}
     ],
     exercises:[{id:uid(),title:'Example: 20-min walk',days:[1,3,5],time:'17:30',note:'Brisk pace'}],
-    notes:[],dayNotes:{},tasks:{},done:{},theme:'auto',hintDismissed:false};
+    todos:[],notes:[],dayNotes:{},tasks:{},done:{},theme:'auto',hintDismissed:false};
 }
-function blank(){return {version:1,plan:{0:[],1:[],2:[],3:[],4:[],5:[],6:[]},chores:[],exercises:[],notes:[],dayNotes:{},tasks:{},done:{},theme:'auto',hintDismissed:true};}
+function blank(){return {version:1,plan:{0:[],1:[],2:[],3:[],4:[],5:[],6:[]},chores:[],exercises:[],todos:[],notes:[],dayNotes:{},tasks:{},done:{},theme:'auto',hintDismissed:true};}
 function normalize(d){
   if(!d||typeof d!=='object') throw new Error('Invalid data');
   const out=blank();
@@ -331,6 +365,8 @@ function normalize(d){
   for(let i=0;i<7;i++) out.plan[i]=Array.isArray(d.plan&&d.plan[i])?d.plan[i].filter(x=>x&&x.title).map(x=>({id:x.id||uid(),time:x.time||'',title:String(x.title),note:x.note?String(x.note):''})):[];
   out.chores=Array.isArray(d.chores)?d.chores.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||'',createdAt:/^\d{4}-\d{2}-\d{2}$/.test(c.createdAt)?c.createdAt:ymd(new Date())})):[];
   out.exercises=Array.isArray(d.exercises)?d.exercises.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||'',note:c.note?String(c.note):''})):[];
+  const isD=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v);
+  out.todos=Array.isArray(d.todos)?d.todos.filter(t=>t&&typeof t==='object'&&t.title!==undefined).map(t=>({id:t.id||uid(),title:String(t.title),note:t.note?String(t.note):'',created:isD(t.created)?t.created:ymd(new Date()),completed:isD(t.completed)?t.completed:null})):[];
   out.notes=Array.isArray(d.notes)?d.notes.filter(n=>n&&typeof n==='object').map(n=>({id:n.id||uid(),title:n.title?String(n.title):'',body:n.body?String(n.body):'',updated:Number(n.updated)||Date.now()})):[];
   out.dayNotes={};if(d.dayNotes&&typeof d.dayNotes==='object')for(const k in d.dayNotes){if(/^\d{4}-\d{2}-\d{2}$/.test(k)&&typeof d.dayNotes[k]==='string'&&d.dayNotes[k])out.dayNotes[k]=d.dayNotes[k];}
   out.tasks=d.tasks&&typeof d.tasks==='object'?d.tasks:{};
@@ -364,8 +400,8 @@ applyTheme();
 // ---------- tabs ----------
 let view='today';
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
-function showView(v){flushSave();view=v;document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));
-  ['today','plan','chores','exercise','notes','data'].forEach(x=>$('#view-'+x).hidden=x!==v);render();}
+function showView(v){flushSave();view=v;document.querySelectorAll('nav.tabs button').forEach(b=>{b.setAttribute('aria-selected',b.dataset.view===v);if(b.dataset.view===v)scrollTabIntoView(b);});
+  ['today','todo','plan','chores','exercise','notes','data'].forEach(x=>$('#view-'+x).hidden=x!==v);render();}
 
 // ---------- example hint ----------
 function hasExamples(){return Object.values(S.plan).some(l=>l.some(i=>/^Example:/i.test(i.title)))||S.chores.some(c=>/^Example:/i.test(c.title))||S.exercises.some(c=>/^Example:/i.test(c.title));}
@@ -387,7 +423,7 @@ function itemsFor(dateStr){
   (S.tasks[dateStr]||[]).forEach(t=>out.push({key:'task:'+t.id,kind:'task',time:t.time,title:t.title,note:'',id:t.id}));
   const done=S.done[dateStr]||{};out.forEach(x=>x.done=!!done[x.key]);
   const sorted=out.map((x,i)=>({...x,_i:i})).sort((a,b)=>byTime(a,b)||a._i-b._i);
-  return overdueFor(dateStr).concat(sorted);
+  return todosFor(dateStr).concat(overdueFor(dateStr),sorted);
 }
 // ---------- CHORE ROLLOVER (computed, never mutates history) ----------
 // Week = Mon..Sun. Undone chore occurrences from earlier days of the same week (only days already past,
@@ -431,9 +467,9 @@ function renderToday(){
   if(!n){ul.innerHTML='<li class="empty">Nothing planned for this day. Add a task above.</li>';return;}
   ul.innerHTML=items.map(i=>{const cid='c_'+i.key.replace(':','_');return `<li class="k-${i.kind} ${i.overdue?'overdue':''} ${i.done?'done':''}" data-key="${esc(i.key)}">
     <input type="checkbox" class="chk" id="${cid}" ${i.done?'checked':''} aria-label="${esc(i.title)}${i.overdue?' ('+esc(i.note)+')':''}">
-    <span class="time">${i.overdue?'Overdue':i.time?fmtTime(i.time):'—'}</span>
-    <label class="item-main" for="${cid}"><div class="item-title">${esc(i.title)}</div>${i.note?`<div class="item-note">${esc(i.note)}</div>`:''}</label>
-    <span class="tag ${i.kind}">${i.overdue?'Missed chore':i.kind}</span>
+    <span class="time">${i.overdue?'Overdue':i.kind==='todo'?'To-Do':i.time?fmtTime(i.time):'—'}</span>
+    <label class="item-main" for="${cid}"><div class="item-title">${esc(i.title)}</div>${i.note?`<div class="item-note">${esc(i.note)}</div>`:''}${i.age?`<div class="todo-age">${esc(i.age)}</div>`:''}</label>
+    <span class="tag ${i.kind}">${i.overdue?'Missed chore':i.kind==='todo'?'To-Do':i.kind}</span>
     ${i.kind==='task'?`<button class="icon-btn del-task" data-id="${esc(i.id)}" aria-label="Delete task ${esc(i.title)}">✕</button>`:'<span class="spacer" style="width:44px;flex:none" aria-hidden="true"></span>'}
   </li>`;}).join('');
 }
@@ -447,6 +483,7 @@ $('#itemList').addEventListener('change',e=>{if(!e.target.classList.contains('ch
       else{it.dates.forEach(d=>{if(S.done[d]){delete S.done[d][ck];if(!Object.keys(S.done[d]).length&&d!==cur)delete S.done[d];}});
         delete S.done[cur]['rolled:'+id];key='missed:'+id;}
     }}
+  else if(/^todo:/.test(key)){const t=S.todos.find(x=>x.id===key.slice(5));if(t){t.completed=e.target.checked?cur:null;if(e.target.checked)toast('To-do completed');}}
   else if(e.target.checked)S.done[cur][key]=true;else delete S.done[cur][key];
   if(!Object.keys(S.done[cur]).length)delete S.done[cur];save();renderToday();
   const el=document.getElementById('c_'+key.replace(':','_'));el&&el.focus();});
@@ -612,7 +649,62 @@ $('#noteList').addEventListener('click',e=>{const b=e.target.closest('[data-a]')
   const nb=$('#noteList').querySelector(`[data-id="${id}"] [data-a="${b.dataset.a}"]`),fb=$('#noteList').querySelector(`[data-id="${id}"] [data-a="${b.dataset.a==='up'?'down':'up'}"]`);((nb&&!nb.disabled)?nb:fb).focus();});
 $('#addNote').onclick=()=>{flushSave();S.notes.unshift({id:uid(),title:'',body:'',updated:Date.now()});save();renderNotes();$('#noteList input[data-f=title]').focus();};
 
-function render(){renderHint();if(view==='today')renderToday();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();else if(view==='exercise')renderExercises();else if(view==='notes')renderNotes();}
+// ---------- TO-DO (one-time, rolls over until complete) ----------
+function daysBetween(a,b){return Math.round((parseYmd(b)-parseYmd(a))/864e5);}
+function todoAge(t,dateStr){const n=daysBetween(t.created,dateStr);if(n<=0)return 'Added today';
+  const since=n<7?SHORT[parseYmd(t.created).getDay()]:parseYmd(t.created).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  return `Since ${since} · ${n} day${n===1?'':'s'}`;}
+// Shown from its created date onward; after completion only on the completion day (ticked).
+function todosFor(dateStr){
+  return S.todos.filter(t=>t.created<=dateStr&&(!t.completed||t.completed>=dateStr))
+    .map(t=>({key:'todo:'+t.id,kind:'todo',time:'',title:t.title,note:t.note,age:todoAge(t,dateStr),done:t.completed===dateStr}));
+}
+function fmtDay(ds){const d=parseYmd(ds);return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
+function renderTodos(){
+  const open=S.todos.filter(t=>!t.completed),done=S.todos.filter(t=>t.completed).sort((a,b)=>b.completed.localeCompare(a.completed));
+  const today=ymd(new Date());
+  $('#todoList').innerHTML=open.length?open.map((t,i)=>`<div class="todo-card" data-id="${t.id}">
+      <input type="checkbox" class="chk" data-a="complete" aria-label="Mark ${esc(t.title)} done">
+      <div class="fields">
+        <input type="text" value="${esc(t.title)}" data-f="title" aria-label="To-do title">
+        <input type="text" value="${esc(t.note)}" data-f="note" placeholder="Note (optional)" aria-label="Note">
+      </div>
+      <div class="acts">
+        <button class="icon-btn" data-a="up" aria-label="Move ${esc(t.title)} up" title="Move up" ${i===0?'disabled':''}>↑</button>
+        <button class="icon-btn" data-a="down" aria-label="Move ${esc(t.title)} down" title="Move down" ${i===open.length-1?'disabled':''}>↓</button>
+        <button class="icon-btn" data-a="del" aria-label="Delete ${esc(t.title)}" title="Delete">✕</button>
+      </div>
+      <div class="note-meta">${t.created>=today?'Added today':`Added ${fmtDay(t.created)} · open ${daysBetween(t.created,today)} day${daysBetween(t.created,today)===1?'':'s'}`}</div>
+    </div>`).join(''):'<div class="empty">No open to-dos. Add one above — it will stay at the top of Today until it’s done.</div>';
+  $('#todoDoneBox').hidden=!done.length;$('#todoDoneSummary').textContent=`Completed (${done.length})`;
+  $('#todoDoneList').innerHTML=done.map(t=>`<div class="todo-card completed" data-id="${t.id}">
+      <span aria-hidden="true" style="width:28px;text-align:center;color:var(--ok);font-weight:800">✓</span>
+      <div class="fields"><span class="t">${esc(t.title)}</span>${t.note?`<span class="muted" style="font-size:.88rem">${esc(t.note)}</span>`:''}</div>
+      <div class="acts"><button class="btn small" data-a="undo">Undo</button><button class="icon-btn" data-a="del" aria-label="Delete ${esc(t.title)}" title="Delete">✕</button></div>
+      <div class="note-meta">Completed ${fmtDay(t.completed)} · added ${fmtDay(t.created)}</div>
+    </div>`).join('');
+}
+$('#todoAddForm').onsubmit=e=>{e.preventDefault();const title=$('#todoTitle').value.trim();if(!title)return;
+  S.todos.push({id:uid(),title,note:$('#todoNote').value.trim(),created:ymd(new Date()),completed:null});save();
+  $('#todoTitle').value='';$('#todoNote').value='';renderTodos();$('#todoTitle').focus();toast('To-do added');};
+const todoView=$('#view-todo');
+todoView.addEventListener('change',e=>{const card=e.target.closest('[data-id]');if(!card)return;const t=S.todos.find(x=>x.id===card.dataset.id);if(!t)return;
+  if(e.target.dataset.a==='complete'){t.completed=ymd(new Date());save();renderTodos();toast('To-do completed');return;}
+  const f=e.target.dataset.f;if(!f)return;let v=e.target.value.trim();if(f==='title'&&!v){e.target.value=t.title;return;}
+  t[f]=v;save();toast('Saved');});
+todoView.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||b.dataset.a==='complete')return;const card=b.closest('[data-id]');if(!card)return;
+  const t=S.todos.find(x=>x.id===card.dataset.id);if(!t)return;const a=b.dataset.a;
+  if(a==='del'){if(!confirm(`Delete to-do "${t.title}"?`))return;S.todos=S.todos.filter(x=>x!==t);save();renderTodos();toast('To-do deleted');return;}
+  if(a==='undo'){t.completed=null;save();renderTodos();toast('Moved back to open');return;}
+  if(a==='up'||a==='down'){const open=S.todos.filter(x=>!x.completed),k=open.indexOf(t),o=open[a==='up'?k-1:k+1];if(!o)return;
+    const i=S.todos.indexOf(t),j=S.todos.indexOf(o);[S.todos[i],S.todos[j]]=[S.todos[j],S.todos[i]];save();renderTodos();
+    const nb=$('#todoList').querySelector(`[data-id="${t.id}"] [data-a="${a}"]`),fb=$('#todoList').querySelector(`[data-id="${t.id}"] [data-a="${a==='up'?'down':'up'}"]`);((nb&&!nb.disabled)?nb:fb).focus();}});
+$('#clearDoneTodos').onclick=()=>{const n=S.todos.filter(t=>t.completed).length;if(!n||!confirm(`Permanently delete ${n} completed to-do${n===1?'':'s'}?`))return;
+  S.todos=S.todos.filter(t=>!t.completed);save();renderTodos();toast('Completed to-dos cleared');};
+function scrollTabIntoView(b){const n=b.parentElement;if(n.scrollWidth<=n.clientWidth)return;
+  const l=b.offsetLeft,r=l+b.offsetWidth;if(l<n.scrollLeft+24)n.scrollLeft=Math.max(0,l-24);else if(r>n.scrollLeft+n.clientWidth-24)n.scrollLeft=r-n.clientWidth+24;}
+
+function render(){renderHint();if(view==='today')renderToday();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();else if(view==='exercise')renderExercises();else if(view==='notes')renderNotes();else if(view==='todo')renderTodos();}
 // refresh "Today" label if the tab stays open past midnight
 let lastToday=ymd(new Date());setInterval(()=>{const t=ymd(new Date());if(t!==lastToday){if(cur===lastToday)cur=t;lastToday=t;if(view==='today')renderToday();}},60000);
 render();
