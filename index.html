@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily To-Do</title>
+<style>
+:root{
+  --bg:#f5f6fa;--card:#fff;--text:#1d2330;--muted:#6b7385;--line:#e3e6ee;
+  --accent:#4f6ef7;--accent-2:#eef1fe;--ok:#1fa971;--danger:#d64545;
+  --plan:#4f6ef7;--chore:#e08a1e;--task:#8b5cf6;--shadow:0 1px 3px rgba(20,30,60,.08),0 4px 16px rgba(20,30,60,.05);
+  --radius:14px;
+}
+[data-theme="dark"]{
+  --bg:#12151c;--card:#1b2029;--text:#e7eaf1;--muted:#98a0b3;--line:#2c3340;
+  --accent:#7c93ff;--accent-2:#252c44;--ok:#35c98b;--danger:#f06a6a;
+  --plan:#7c93ff;--chore:#f0a543;--task:#a78bfa;--shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.45;font-size:16px}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:860px;margin:0 auto;padding:16px 16px 64px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.brand{font-weight:750;font-size:1.25rem;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.brand .dot{width:12px;height:12px;border-radius:50%;background:var(--accent);display:inline-block}
+nav.tabs{display:flex;gap:4px;background:var(--card);padding:4px;border-radius:12px;box-shadow:var(--shadow);flex-wrap:wrap}
+nav.tabs button{border:0;background:transparent;padding:10px 14px;border-radius:9px;cursor:pointer;min-height:44px;font-weight:600;color:var(--muted)}
+nav.tabs button[aria-selected="true"]{background:var(--accent);color:#fff}
+nav.tabs button:focus-visible,.btn:focus-visible,.icon-btn:focus-visible,.pill input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+.btn{border:1px solid var(--line);background:var(--card);padding:10px 16px;border-radius:10px;cursor:pointer;min-height:44px;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--line))}
+.btn.small{padding:6px 12px;min-height:36px;font-size:.9rem}
+.icon-btn{border:0;background:transparent;width:44px;height:44px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.1rem}
+.icon-btn:hover{background:var(--accent-2);color:var(--text)}
+input[type=text],input[type=time],textarea,select{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.hint{background:color-mix(in srgb,var(--chore) 14%,var(--card));border:1px solid color-mix(in srgb,var(--chore) 35%,transparent);padding:10px 14px;border-radius:10px;font-size:.92rem;margin-bottom:14px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.hint button{flex:none}
+/* Day header */
+.dayhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dayhead h1{margin:0;font-size:1.45rem;letter-spacing:-.01em}
+.dayhead .sub{color:var(--muted);font-size:.95rem}
+.daynav{display:flex;align-items:center;gap:4px}
+.progress{margin-top:14px}
+.bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--ok));width:0;transition:width .3s}
+.progress .count{display:flex;justify-content:space-between;font-size:.9rem;color:var(--muted);margin-top:6px}
+/* quick add */
+form.quick{display:grid;grid-template-columns:1fr 150px auto;gap:8px}
+@media (max-width:560px){form.quick{grid-template-columns:1fr 130px}form.quick .btn{grid-column:1/-1}}
+/* items */
+ul.items{list-style:none;margin:0;padding:0}
+ul.items li{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+ul.items li:last-child{border-bottom:0}
+.chk{appearance:none;-webkit-appearance:none;width:28px;height:28px;border:2px solid var(--muted);border-radius:8px;cursor:pointer;flex:none;display:grid;place-content:center;background:var(--card);margin:8px}
+.chk::after{content:"";width:12px;height:7px;border-left:3px solid #fff;border-bottom:3px solid #fff;transform:rotate(-45deg) translate(1px,-1px);opacity:0}
+.chk:checked{background:var(--ok);border-color:var(--ok)}
+.chk:checked::after{opacity:1}
+.chk:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.item-main{flex:1;min-width:0;cursor:pointer}
+.item-title{font-weight:560;overflow-wrap:break-word}
+li.done .item-title{text-decoration:line-through;color:var(--muted)}
+.item-note{color:var(--muted);font-size:.88rem}
+.time{font-variant-numeric:tabular-nums;font-weight:650;color:var(--muted);font-size:.92rem;min-width:70px}
+.tag{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:99px;flex:none}
+.tag.plan{background:color-mix(in srgb,var(--plan) 15%,transparent);color:var(--plan)}
+.tag.chore{background:color-mix(in srgb,var(--chore) 18%,transparent);color:var(--chore)}
+.tag.task{background:color-mix(in srgb,var(--task) 15%,transparent);color:var(--task)}
+.empty{color:var(--muted);text-align:center;padding:24px 8px}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+h2{font-size:1.1rem;margin:0 0 12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* plan editor */
+.daytabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.daytabs button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px;min-height:44px;min-width:58px;cursor:pointer;font-weight:650}
+.daytabs button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.daytabs .n{display:block;font-size:.72rem;font-weight:500;opacity:.8}
+.edit-grid{display:grid;grid-template-columns:150px 1fr 1fr auto;gap:8px;align-items:center}
+@media (max-width:640px){.edit-grid{grid-template-columns:140px 1fr}.edit-grid .note-in{grid-column:1/-1}.edit-grid .acts{grid-column:1/-1;justify-content:flex-end}}
+.edit-list .edit-grid{padding:8px 0;border-bottom:1px solid var(--line)}
+.edit-list .edit-grid:last-child{border-bottom:0}
+.acts{display:flex;gap:2px}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{position:relative}
+.pill input{position:absolute;opacity:0;width:1px;height:1px}
+.pill span{display:inline-flex;align-items:center;justify-content:center;min-width:48px;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:99px;cursor:pointer;font-weight:600;font-size:.9rem;user-select:none}
+.pill input:checked+span{background:var(--chore);border-color:var(--chore);color:#fff}
+.chore-card{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;display:grid;gap:10px}
+.chore-top{display:grid;grid-template-columns:1fr 150px auto;gap:8px;align-items:center}
+@media (max-width:560px){.chore-top{grid-template-columns:1fr auto}.chore-top input[data-f=title]{grid-column:1/-1}}
+.copybox{border:1px dashed var(--line);border-radius:12px;padding:12px;margin-top:14px}
+.muted{color:var(--muted)}
+ul.items li{border-left:4px solid transparent;padding-left:4px}
+ul.items li.k-plan{border-left-color:color-mix(in srgb,var(--plan) 55%,transparent)}
+ul.items li.k-chore{border-left-color:color-mix(in srgb,var(--chore) 70%,transparent)}
+ul.items li.k-task{border-left-color:color-mix(in srgb,var(--task) 60%,transparent)}
+@media (max-width:560px){
+  .wrap{padding:10px 10px 64px}
+  header.top{gap:8px}
+  nav.tabs{width:100%;flex-wrap:nowrap}
+  nav.tabs button{flex:1;padding:10px 6px;font-size:.9rem}
+  .brand{flex:1}
+  header.top>.row{width:100%;flex-wrap:nowrap}
+  .card{padding:14px}
+  ul.items li{gap:6px}
+  .chk{margin:6px 2px}
+  .time{min-width:58px;font-size:.82rem}
+  .tag{display:none}
+  .legend .tag{display:inline-block}
+  .spacer{display:none}
+  .hint{flex-direction:column;align-items:stretch}
+}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(80px);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:10px;opacity:0;transition:.25s;z-index:10;font-weight:600}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="dot" aria-hidden="true"></span>Daily To-Do</div>
+    <div class="row">
+      <nav class="tabs" role="tablist" aria-label="Views">
+        <button role="tab" id="tab-today" aria-controls="view-today" aria-selected="true" data-view="today">Today</button>
+        <button role="tab" id="tab-plan" aria-controls="view-plan" aria-selected="false" data-view="plan">Weekly Plan</button>
+        <button role="tab" id="tab-chores" aria-controls="view-chores" aria-selected="false" data-view="chores">Chores</button>
+        <button role="tab" id="tab-data" aria-controls="view-data" aria-selected="false" data-view="data">Data</button>
+      </nav>
+      <button class="icon-btn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">◐</button>
+    </div>
+  </header>
+
+  <div class="hint" id="exampleHint" hidden>
+    <span>👋 Items marked <b>“Example:”</b> are samples — edit or delete them in <b>Weekly Plan</b> and <b>Chores</b>.</span>
+    <button class="btn small" id="clearExamples">Remove examples</button>
+  </div>
+
+  <!-- TODAY -->
+  <section id="view-today" role="tabpanel" aria-labelledby="tab-today">
+    <div class="card">
+      <div class="dayhead">
+        <div>
+          <h1 id="dayTitle">Today</h1>
+          <div class="sub" id="daySub"></div>
+        </div>
+        <div class="daynav">
+          <button class="icon-btn" id="prevDay" aria-label="Previous day">◀</button>
+          <button class="btn small" id="todayBtn">Today</button>
+          <button class="icon-btn" id="nextDay" aria-label="Next day">▶</button>
+        </div>
+      </div>
+      <div class="progress">
+        <div class="bar" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" id="bar"><div></div></div>
+        <div class="count"><span id="countText">0 of 0 done</span><span id="pctText">0%</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <form class="quick" id="quickForm" autocomplete="off">
+        <label class="sr-only" for="quickTitle">New task</label>
+        <input type="text" id="quickTitle" placeholder="Add a task for this day…" required>
+        <label class="sr-only" for="quickTime">Time (optional)</label>
+        <input type="time" id="quickTime" aria-label="Time (optional)">
+        <button class="btn primary" type="submit">Add</button>
+      </form>
+    </div>
+    <div class="card">
+      <ul class="items" id="itemList" aria-label="Items for this day"></ul>
+      <div class="legend"><span class="tag plan">Plan</span><span class="tag chore">Chore</span><span class="tag task">Task</span></div>
+    </div>
+  </section>
+
+  <!-- PLAN -->
+  <section id="view-plan" role="tabpanel" aria-labelledby="tab-plan" hidden>
+    <div class="card">
+      <h2>Weekly plan</h2>
+      <p class="muted" style="margin-top:-6px">Your preprogrammed plan for each day of the week. It shows up automatically on that weekday.</p>
+      <div class="daytabs" id="planDayTabs" role="group" aria-label="Choose weekday"></div>
+      <div class="edit-list" id="planList"></div>
+      <form class="edit-grid" id="planAddForm" style="margin-top:12px" autocomplete="off">
+        <input type="time" id="planTime" aria-label="Start time (optional)">
+        <input type="text" id="planTitle" placeholder="New plan item" aria-label="Plan item title" required>
+        <input type="text" class="note-in" id="planNote" placeholder="Note (optional)" aria-label="Note (optional)">
+        <div class="acts"><button class="btn primary" type="submit">Add</button></div>
+      </form>
+      <div class="copybox">
+        <div style="font-weight:650;margin-bottom:8px">Copy <span id="copyFromName">this day</span>’s plan to…</div>
+        <div class="pills" id="copyPills"></div>
+        <div class="row" style="margin-top:10px">
+          <label class="row" style="gap:6px"><input type="checkbox" id="copyReplace" style="width:20px;height:20px"> Replace existing items (otherwise append)</label>
+          <button class="btn small" id="copyBtn">Copy</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHORES -->
+  <section id="view-chores" role="tabpanel" aria-labelledby="tab-chores" hidden>
+    <div class="card">
+      <h2>Recurring chores</h2>
+      <p class="muted" style="margin-top:-6px">Chores appear on the Today view only on the weekdays you pick.</p>
+      <div id="choreList"></div>
+      <button class="btn primary" id="addChore">+ Add chore</button>
+    </div>
+  </section>
+
+  <!-- DATA -->
+  <section id="view-data" role="tabpanel" aria-labelledby="tab-data" hidden>
+    <div class="card">
+      <h2>Backup &amp; restore</h2>
+      <p class="muted">Your data is stored in this browser only (localStorage). Export a backup file to keep it safe or move it to another device.</p>
+      <div class="row">
+        <button class="btn primary" id="exportBtn">Export JSON</button>
+        <button class="btn" id="importBtn">Import JSON…</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Reset</h2>
+      <p class="muted">Erase everything and start over with the example plan.</p>
+      <div class="row">
+        <button class="btn danger" id="resetBtn">Reset with examples</button>
+        <button class="btn danger" id="wipeBtn">Erase everything (blank)</button>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+const KEY='dailyTodo.v1';
+const DAY_NAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const ORDER=[1,2,3,4,5,6,0]; // Mon-first display
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+
+function seed(){
+  const p=(time,title,note)=>({id:uid(),time,title,note:note||''});
+  const weekday=()=>[p('07:00','Example: Wake up & stretch'),p('08:00','Example: Breakfast'),p('09:00','Example: Focused work block','Most important task first'),p('12:30','Example: Lunch'),p('18:00','Example: Exercise'),p('22:00','Example: Wind down, read')];
+  const plan={};
+  [1,2,3,4,5].forEach(d=>plan[d]=weekday());
+  plan[6]=[p('09:00','Example: Slow breakfast'),p('10:30','Example: Groceries'),p('14:00','Example: Free time')];
+  plan[0]=[p('10:00','Example: Weekly review & plan ahead'),p('17:00','Example: Meal prep')];
+  return {version:1,plan,
+    chores:[
+      {id:uid(),title:'Example: Take out trash',days:[2,5],time:'19:00'},
+      {id:uid(),title:'Example: Water plants',days:[1,4],time:''},
+      {id:uid(),title:'Example: Make bed',days:[0,1,2,3,4,5,6],time:''}
+    ],
+    tasks:{},done:{},theme:'auto',hintDismissed:false};
+}
+function blank(){return {version:1,plan:{0:[],1:[],2:[],3:[],4:[],5:[],6:[]},chores:[],tasks:{},done:{},theme:'auto',hintDismissed:true};}
+function normalize(d){
+  if(!d||typeof d!=='object') throw new Error('Invalid data');
+  const out=blank();
+  out.hintDismissed=!!d.hintDismissed;
+  out.theme=['auto','light','dark'].includes(d.theme)?d.theme:'auto';
+  for(let i=0;i<7;i++) out.plan[i]=Array.isArray(d.plan&&d.plan[i])?d.plan[i].filter(x=>x&&x.title).map(x=>({id:x.id||uid(),time:x.time||'',title:String(x.title),note:x.note?String(x.note):''})):[];
+  out.chores=Array.isArray(d.chores)?d.chores.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||''})):[];
+  out.tasks=d.tasks&&typeof d.tasks==='object'?d.tasks:{};
+  out.done=d.done&&typeof d.done==='object'?d.done:{};
+  return out;
+}
+let S;
+try{const raw=localStorage.getItem(KEY);S=raw?normalize(JSON.parse(raw)):seed();}catch(e){S=seed();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('Could not save (storage full or blocked)');}}
+save();
+
+// ---------- helpers ----------
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function parseYmd(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function fmtTime(t){if(!t)return '';const [h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';return ((h%12)||12)+':'+String(m).padStart(2,'0')+' '+ap;}
+function byTime(a,b){if(!a.time&&!b.time)return 0;if(!a.time)return 1;if(!b.time)return -1;return a.time.localeCompare(b.time);}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);}
+
+// ---------- theme ----------
+const mq=window.matchMedia('(prefers-color-scheme: dark)');
+function applyTheme(){const dark=S.theme==='dark'||(S.theme==='auto'&&mq.matches);document.documentElement.dataset.theme=dark?'dark':'light';$('#themeBtn').textContent=dark?'☀':'☾';$('#themeBtn').setAttribute('aria-label',dark?'Switch to light mode':'Switch to dark mode');}
+mq.addEventListener&&mq.addEventListener('change',applyTheme);
+$('#themeBtn').onclick=()=>{const dark=document.documentElement.dataset.theme==='dark';S.theme=dark?'light':'dark';save();applyTheme();};
+applyTheme();
+
+// ---------- tabs ----------
+let view='today';
+document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+function showView(v){view=v;document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));
+  ['today','plan','chores','data'].forEach(x=>$('#view-'+x).hidden=x!==v);render();}
+
+// ---------- example hint ----------
+function hasExamples(){return Object.values(S.plan).some(l=>l.some(i=>/^Example:/i.test(i.title)))||S.chores.some(c=>/^Example:/i.test(c.title));}
+function renderHint(){$('#exampleHint').hidden=!hasExamples();}
+$('#clearExamples').onclick=()=>{if(!confirm('Remove all items whose title starts with "Example:"?'))return;
+  for(let i=0;i<7;i++)S.plan[i]=S.plan[i].filter(x=>!/^Example:/i.test(x.title));
+  S.chores=S.chores.filter(c=>!/^Example:/i.test(c.title));save();render();toast('Examples removed');};
+
+// ---------- TODAY ----------
+let cur=ymd(new Date());
+function itemsFor(dateStr){
+  const wd=parseYmd(dateStr).getDay();
+  const out=[];
+  (S.plan[wd]||[]).forEach(p=>out.push({key:'plan:'+p.id,kind:'plan',time:p.time,title:p.title,note:p.note}));
+  S.chores.filter(c=>c.days.includes(wd)).forEach(c=>out.push({key:'chore:'+c.id,kind:'chore',time:c.time,title:c.title,note:''}));
+  (S.tasks[dateStr]||[]).forEach(t=>out.push({key:'task:'+t.id,kind:'task',time:t.time,title:t.title,note:'',id:t.id}));
+  return out.map((x,i)=>({...x,_i:i})).sort((a,b)=>byTime(a,b)||a._i-b._i);
+}
+function renderToday(){
+  const d=parseYmd(cur),todayStr=ymd(new Date());
+  const diff=Math.round((d-parseYmd(todayStr))/864e5);
+  const rel=diff===0?'Today':diff===1?'Tomorrow':diff===-1?'Yesterday':DAY_NAMES[d.getDay()];
+  $('#dayTitle').textContent=rel;
+  $('#daySub').textContent=d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  $('#todayBtn').disabled=diff===0;
+  const items=itemsFor(cur),done=S.done[cur]||{};
+  const n=items.length,k=items.filter(i=>done[i.key]).length,pct=n?Math.round(k/n*100):0;
+  $('#bar').firstElementChild.style.width=pct+'%';$('#bar').setAttribute('aria-valuenow',pct);
+  $('#countText').textContent=`${k} of ${n} done`+(n&&k===n?' — all done! 🎉':'');$('#pctText').textContent=pct+'%';
+  const ul=$('#itemList');
+  if(!n){ul.innerHTML='<li class="empty">Nothing planned for this day. Add a task above.</li>';return;}
+  ul.innerHTML=items.map(i=>{const cid='c_'+i.key.replace(':','_');return `<li class="k-${i.kind} ${done[i.key]?'done':''}" data-key="${esc(i.key)}">
+    <input type="checkbox" class="chk" id="${cid}" ${done[i.key]?'checked':''} aria-label="${esc(i.title)}">
+    <span class="time">${i.time?fmtTime(i.time):'—'}</span>
+    <label class="item-main" for="${cid}"><div class="item-title">${esc(i.title)}</div>${i.note?`<div class="item-note">${esc(i.note)}</div>`:''}</label>
+    <span class="tag ${i.kind}">${i.kind}</span>
+    ${i.kind==='task'?`<button class="icon-btn del-task" data-id="${esc(i.id)}" aria-label="Delete task ${esc(i.title)}">✕</button>`:'<span class="spacer" style="width:44px;flex:none" aria-hidden="true"></span>'}
+  </li>`;}).join('');
+}
+$('#itemList').addEventListener('change',e=>{if(!e.target.classList.contains('chk'))return;const key=e.target.closest('li').dataset.key;
+  S.done[cur]=S.done[cur]||{};if(e.target.checked)S.done[cur][key]=true;else delete S.done[cur][key];
+  if(!Object.keys(S.done[cur]).length)delete S.done[cur];save();renderToday();
+  const el=document.getElementById('c_'+key.replace(':','_'));el&&el.focus();});
+$('#itemList').addEventListener('click',e=>{const b=e.target.closest('.del-task');if(!b)return;
+  S.tasks[cur]=(S.tasks[cur]||[]).filter(t=>t.id!==b.dataset.id);if(!S.tasks[cur].length)delete S.tasks[cur];
+  if(S.done[cur])delete S.done[cur]['task:'+b.dataset.id];save();renderToday();toast('Task deleted');});
+$('#quickForm').onsubmit=e=>{e.preventDefault();const t=$('#quickTitle').value.trim();if(!t)return;
+  (S.tasks[cur]=S.tasks[cur]||[]).push({id:uid(),title:t,time:$('#quickTime').value||''});save();
+  $('#quickTitle').value='';$('#quickTime').value='';renderToday();$('#quickTitle').focus();toast('Task added');};
+function shift(n){const d=parseYmd(cur);d.setDate(d.getDate()+n);cur=ymd(d);renderToday();}
+$('#prevDay').onclick=()=>shift(-1);$('#nextDay').onclick=()=>shift(1);$('#todayBtn').onclick=()=>{cur=ymd(new Date());renderToday();};
+document.addEventListener('keydown',e=>{if(view!=='today'||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+  if(e.key==='ArrowLeft')shift(-1);else if(e.key==='ArrowRight')shift(1);});
+
+// ---------- PLAN ----------
+let planDay=new Date().getDay();
+function renderPlan(){
+  $('#planDayTabs').innerHTML=ORDER.map(d=>`<button type="button" data-d="${d}" aria-pressed="${d===planDay}">${SHORT[d]}<span class="n">${S.plan[d].length} item${S.plan[d].length===1?'':'s'}</span></button>`).join('');
+  const list=S.plan[planDay];
+  $('#planList').innerHTML=list.length?list.map((p,i)=>`<div class="edit-grid" data-id="${p.id}">
+      <input type="time" value="${esc(p.time)}" data-f="time" aria-label="Start time">
+      <input type="text" value="${esc(p.title)}" data-f="title" aria-label="Title">
+      <input type="text" class="note-in" value="${esc(p.note)}" data-f="note" placeholder="Note (optional)" aria-label="Note">
+      <div class="acts">
+        <button class="icon-btn" data-a="up" aria-label="Move up" ${i===0?'disabled':''}>↑</button>
+        <button class="icon-btn" data-a="down" aria-label="Move down" ${i===list.length-1?'disabled':''}>↓</button>
+        <button class="icon-btn" data-a="del" aria-label="Delete ${esc(p.title)}">✕</button>
+      </div></div>`).join('')+`<div class="row" style="justify-content:flex-end;padding-top:8px"><button class="btn small" id="sortPlan">Sort by time</button></div>`
+    :`<div class="empty">No plan items for ${DAY_NAMES[planDay]} yet.</div>`;
+  $('#copyFromName').textContent=DAY_NAMES[planDay];
+  $('#copyPills').innerHTML=ORDER.filter(d=>d!==planDay).map(d=>`<label class="pill"><input type="checkbox" value="${d}"><span>${SHORT[d]}</span></label>`).join('');
+}
+$('#planDayTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;planDay=+b.dataset.d;renderPlan();});
+$('#planList').addEventListener('change',e=>{const row=e.target.closest('[data-id]');if(!row||!e.target.dataset.f)return;
+  const it=S.plan[planDay].find(x=>x.id===row.dataset.id);const f=e.target.dataset.f;let v=e.target.value;
+  if(f==='title'){v=v.trim();if(!v){e.target.value=it.title;return;}}
+  it[f]=v;save();toast('Saved');});
+$('#planList').addEventListener('click',e=>{
+  if(e.target.id==='sortPlan'){S.plan[planDay].sort(byTime);save();renderPlan();toast('Sorted by time');return;}
+  const b=e.target.closest('[data-a]');if(!b)return;const l=S.plan[planDay];const i=l.findIndex(x=>x.id===b.closest('[data-id]').dataset.id);
+  if(b.dataset.a==='del'){l.splice(i,1);toast('Deleted');}
+  else{const j=b.dataset.a==='up'?i-1:i+1;if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];}
+  save();renderPlan();renderHint();});
+$('#planAddForm').onsubmit=e=>{e.preventDefault();const t=$('#planTitle').value.trim();if(!t)return;
+  S.plan[planDay].push({id:uid(),time:$('#planTime').value||'',title:t,note:$('#planNote').value.trim()});S.plan[planDay].sort(byTime);save();
+  $('#planTitle').value='';$('#planTime').value='';$('#planNote').value='';renderPlan();$('#planTitle').focus();toast('Added to '+DAY_NAMES[planDay]);};
+$('#copyBtn').onclick=()=>{const targets=[...$('#copyPills').querySelectorAll('input:checked')].map(i=>+i.value);
+  if(!targets.length){toast('Pick at least one day');return;}const rep=$('#copyReplace').checked;
+  if(rep&&!confirm(`Replace the plan on ${targets.map(d=>DAY_NAMES[d]).join(', ')}?`))return;
+  targets.forEach(d=>{const copies=S.plan[planDay].map(p=>({...p,id:uid()}));S.plan[d]=rep?copies:S.plan[d].concat(copies).sort(byTime);});
+  save();renderPlan();toast('Copied to '+targets.map(d=>SHORT[d]).join(', '));};
+
+// ---------- CHORES ----------
+function renderChores(){
+  const el=$('#choreList');
+  el.innerHTML=S.chores.length?S.chores.map(c=>`<div class="chore-card" data-id="${c.id}">
+    <div class="chore-top">
+      <input type="text" value="${esc(c.title)}" data-f="title" placeholder="Chore name" aria-label="Chore name">
+      <input type="time" value="${esc(c.time)}" data-f="time" aria-label="Time (optional)">
+      <div class="acts"><button class="icon-btn" data-a="del" aria-label="Delete chore ${esc(c.title)}">✕</button></div>
+    </div>
+    <div class="pills" role="group" aria-label="Repeat on">
+      ${ORDER.map(d=>`<label class="pill"><input type="checkbox" data-day="${d}" ${c.days.includes(d)?'checked':''}><span>${SHORT[d]}</span></label>`).join('')}
+      <button class="btn small" data-a="every">${c.days.length===7?'Clear days':'Every day'}</button>
+    </div>
+    ${c.days.length?'':'<div class="muted" style="font-size:.88rem">⚠ No days selected — this chore won’t appear anywhere.</div>'}
+  </div>`).join(''):'<div class="empty">No chores yet.</div>';
+}
+$('#choreList').addEventListener('change',e=>{const card=e.target.closest('[data-id]');if(!card)return;const c=S.chores.find(x=>x.id===card.dataset.id);
+  if(e.target.dataset.day!==undefined){const d=+e.target.dataset.day;c.days=e.target.checked?[...new Set([...c.days,d])]:c.days.filter(x=>x!==d);save();renderChores();return;}
+  const f=e.target.dataset.f;if(!f)return;let v=e.target.value;if(f==='title'){v=v.trim();if(!v){e.target.value=c.title;return;}}
+  c[f]=v;save();renderHint();toast('Saved');});
+$('#choreList').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const card=b.closest('[data-id]');const c=S.chores.find(x=>x.id===card.dataset.id);
+  if(b.dataset.a==='del'){if(!confirm(`Delete chore "${c.title}"?`))return;S.chores=S.chores.filter(x=>x!==c);toast('Chore deleted');}
+  else if(b.dataset.a==='every'){c.days=c.days.length===7?[]:[0,1,2,3,4,5,6];}
+  save();renderChores();renderHint();});
+$('#addChore').onclick=()=>{S.chores.push({id:uid(),title:'New chore',days:[],time:''});save();renderChores();
+  const inp=$('#choreList').lastElementChild.querySelector('input[data-f=title]');inp.focus();inp.select();};
+
+// ---------- DATA ----------
+$('#exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='daily-todo-backup-'+ymd(new Date())+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Backup exported');};
+$('#importBtn').onclick=()=>$('#importFile').click();
+$('#importFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=normalize(JSON.parse(r.result));if(!confirm('Replace all current data with this backup?'))return;S=d;save();applyTheme();render();toast('Backup imported');}
+    catch(err){alert('Could not import: '+err.message);}finally{e.target.value='';}};r.readAsText(f);};
+$('#resetBtn').onclick=()=>{if(!confirm('Erase ALL data and restore the example plan? This cannot be undone.'))return;S=seed();save();applyTheme();render();toast('Reset done');};
+$('#wipeBtn').onclick=()=>{if(!confirm('Erase ALL data and start completely blank? This cannot be undone.'))return;S=blank();save();applyTheme();render();toast('All data erased');};
+
+function render(){renderHint();if(view==='today')renderToday();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();}
+// refresh "Today" label if the tab stays open past midnight
+let lastToday=ymd(new Date());setInterval(()=>{const t=ymd(new Date());if(t!==lastToday){if(cur===lastToday)cur=t;lastToday=t;if(view==='today')renderToday();}},60000);
+render();
+})();
+</script>
+</body>
+</html>
