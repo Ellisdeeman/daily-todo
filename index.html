@@ -253,6 +253,10 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 .ql-name{font-weight:700}
 .ql-total{font-weight:750;font-variant-numeric:tabular-nums}
 .ql-total.met{color:var(--ok)}
+.ql-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+#reorderBtn[aria-pressed=true]{border-color:var(--accent-line);color:var(--accent-text)}
+.ql-mv .ql-head{margin:0;flex-wrap:nowrap}.ql-mv .ql-name{min-width:0;overflow-wrap:anywhere}
+.mv-btns{margin-left:auto;display:flex;gap:6px;flex:none}.mv-btns .icon-btn{width:var(--tap);height:var(--tap);border:1px solid var(--line);background:var(--card)}
 .water-card{box-shadow:inset 6px 0 0 var(--water),var(--shadow)}
 .water-box .ql-head{margin-bottom:10px}.w-title{margin:0;font-size:1.15rem;display:flex;gap:6px;align-items:center}
 .w-total{font-size:1.1rem;color:var(--water-text)}.w-total.met{color:var(--ok)}
@@ -443,7 +447,9 @@ select{appearance:auto}
       <p class="muted small" id="qlogHint" style="margin:10px 0 0">Add amounts any time — even on days an exercise isn’t scheduled</p>
     </div>
     <div class="card water-card" id="waterCard"></div>
-    <div class="card qlog" id="qlogCard"><div id="qlogList"></div></div>
+    <div class="card qlog" id="qlogCard">
+      <div class="ql-top"><h2 style="margin:0">Exercises</h2><button type="button" class="btn small" id="reorderBtn" aria-pressed="false" hidden>↕ Reorder</button></div>
+      <div id="qlogList"></div></div>
     <div class="card empty-card" id="logEmpty" hidden>
       <h2 style="margin:0 0 6px">No exercises to log yet</h2>
       <p class="muted" style="margin:0 0 12px">Give an exercise a unit (reps, miles, minutes…) in the Exercise tab and it will show up here with one-tap +5 / +10 / +20 buttons.</p>
@@ -1277,6 +1283,7 @@ function renderLogSummary(){const el=$('#logSum'),d=parseYmd(cur),diff=Math.roun
     return `<button type="button" class="lpill${met?' met':''}${ex.water?' wpill':''}" data-logex="${ex.id}" aria-label="${esc(ex.title)}: ${fmtAmt(t)}${ex.target?' of '+fmtAmt(ex.target):''} ${esc(ex.unit||'')}${met?', target reached':''}. Open in Log" data-total="${t}"><i aria-hidden="true"></i><span class="ln">${esc(ex.title)}</span><b>${fmtAmt(t)}${ex.target?' / '+fmtAmt(ex.target):''}</b>${u?`<span class="lu">${esc(u)}</span>`:''}${met?'<span aria-hidden="true" style="color:var(--ok)">✓</span>':''}</button>`;}).join('');}
 $('#logSum').addEventListener('click',e=>{const p=e.target.closest('[data-logex]');if(p){showView('log');const box=$('#view-log').querySelector(`[data-ex="${p.dataset.logex}"]`);if(box){box.scrollIntoView({block:'center'});const f=box.querySelector('.log-in,[data-ql]');f&&f.focus({preventScroll:true});}return;}
   if(e.target.closest('[data-open-log]'))showView('log');});
+let reorderMode=false;
 function renderQuickLog(){const list=S.exercises.filter(x=>x.unit);
   const d=parseYmd(cur),diff=Math.round((d-parseYmd(ymd(new Date())))/864e5);
   $('#logTitle').textContent=diff===0?'Today':diff===1?'Tomorrow':diff===-1?'Yesterday':DAY_NAMES[d.getDay()];
@@ -1286,6 +1293,10 @@ function renderQuickLog(){const list=S.exercises.filter(x=>x.unit);
   renderWater(future);
   $('#qlogCard').hidden=!list.length;$('#logEmpty').hidden=!!list.length;$('#qlogHint').hidden=!list.length;
   $('#qlogHint').textContent=future?'Future day — logging opens on the day':'Add amounts any time — even on days an exercise isn’t scheduled';
+  if(list.length<2)reorderMode=false;const rb=$('#reorderBtn');rb.hidden=list.length<2;rb.setAttribute('aria-pressed',reorderMode);rb.textContent=reorderMode?'✓ Done':'↕ Reorder';
+  $('#qlogCard').classList.toggle('reordering',reorderMode);
+  if(reorderMode){$('#qlogList').innerHTML=list.map((ex,i)=>`<div class="ql-ex ql-mv" data-mv-id="${ex.id}"><div class="ql-head"><span class="ql-name">${esc(ex.title)}</span>
+      <span class="mv-btns"><button type="button" class="icon-btn" data-mv="up" aria-label="Move ${esc(ex.title)} up" title="Move up" ${i===0?'disabled':''}>↑</button><button type="button" class="icon-btn" data-mv="down" aria-label="Move ${esc(ex.title)} down" title="Move down" ${i===list.length-1?'disabled':''}>↓</button></span></div></div>`).join('');return;}
   $('#qlogList').innerHTML=list.map(ex=>{const l=dayLog(ex.id,cur);return `<div class="ql-ex" data-ex="${ex.id}">
     <div class="ql-head"><span class="ql-name">${esc(ex.title)}</span>${totalHtml(ex,cur)}${isScheduled(ex,cur)?'':'<span class="ql-sub">not scheduled this day · counts in Stats only</span>'}
       ${l.length?`<button type="button" class="btn small" data-ql="edit" style="margin-left:auto">Edit total</button>`:''}</div>
@@ -1317,6 +1328,12 @@ const logKey=e=>{if(e.key==='Enter'&&e.target.matches('.log-in')){e.preventDefau
 ['#view-today','#view-log'].forEach(v=>{$(v).addEventListener('click',logClick);$(v).addEventListener('keydown',logKey);});
 $('#logPrev').onclick=()=>shift(-1);$('#logNext').onclick=()=>shift(1);$('#logToday').onclick=()=>{flushSave();cur=ymd(new Date());render();};
 $('#logGoEx').onclick=()=>showView('exercise');
+$('#reorderBtn').onclick=()=>{reorderMode=!reorderMode;renderQuickLog();$('#reorderBtn').focus();};
+$('#qlogList').addEventListener('click',e=>{const b=e.target.closest('[data-mv]');if(!b)return;const id=b.closest('[data-mv-id]').dataset.mvId,dir=b.dataset.mv;
+  const l=S.exercises,i=l.findIndex(x=>x.id===id);if(i<0)return;let j=i;do{j+=dir==='up'?-1:1;}while(j>=0&&j<l.length&&!l[j].unit);if(j<0||j>=l.length)return;
+  [l[i],l[j]]=[l[j],l[i]];save();renderQuickLog();
+  const box=$('#qlogList').querySelector(`[data-mv-id="${id}"]`),nb=box.querySelector(`[data-mv="${dir}"]`),fb=box.querySelector(`[data-mv="${dir==='up'?'down':'up'}"]`);((nb&&!nb.disabled)?nb:fb).focus();
+  toast(`Moved ${l[j].title} ${dir}`);});
 
 // ---------- STATS ----------
 let statsPeriod='week',chartDays=7;
