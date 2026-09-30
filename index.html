@@ -191,6 +191,36 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 .streak-line b{color:var(--flame-text)}
 @media (max-width:560px){.streaks{grid-template-columns:1fr 1fr;padding:10px;gap:8px}.streaks .stat:last-child{grid-column:1/-1}.stat{padding:8px 12px}.stat-num{font-size:1.2rem}}
 
+/* ===== Calendar ===== */
+#calBtn[aria-expanded="true"]{background:var(--accent);color:var(--accent-ink)}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cal-head h2{margin:0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-dow{margin-bottom:6px}
+.cal-dow span{text-align:center;font-size:.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.cal-day{position:relative;min-height:58px;border-radius:12px;border:2px solid var(--line);background:var(--row);color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:2px;line-height:1.1}
+.cal-day .pct{font-size:.66rem;font-weight:650;opacity:.9}
+.cal-day.out{opacity:.4}
+.cal-day.neutral{background:transparent;color:var(--muted)}
+.cal-day.today{border-color:var(--text)}
+.cal-day.sel{box-shadow:0 0 0 3px var(--accent-line)}
+.cal-day .notedot{position:absolute;top:5px;right:5px}
+.notedot{display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.85}
+.lv0{background:var(--row)!important}
+.lv1{background:color-mix(in srgb,var(--accent) 20%,var(--row))!important}
+.lv2{background:color-mix(in srgb,var(--accent) 38%,var(--row))!important}
+.lv3{background:color-mix(in srgb,var(--accent) 66%,var(--row))!important;color:var(--accent-ink)!important}
+.lv4{background:color-mix(in srgb,var(--accent) 84%,var(--row))!important;color:var(--accent-ink)!important}
+.lv5{background:var(--accent)!important;color:var(--accent-ink)!important;border-color:var(--accent)}
+.cal-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-top:12px;align-items:center}
+.cal-legend{display:flex;align-items:center;gap:4px;font-size:.8rem;flex-wrap:wrap}
+.cal-legend i:not(.notedot){display:inline-block;width:18px;height:18px;border-radius:5px;border:1px solid var(--line)}
+.cal-note-key{margin-left:10px;color:var(--muted);display:inline-flex;align-items:center;gap:5px}
+.cal-sum{font-size:.88rem;color:var(--muted);font-weight:600}
+.cal-sum b{color:var(--text)}
+@media (max-width:560px){.cal-grid{gap:4px}.cal-day{min-height:50px;border-radius:10px}.cal-day .pct{font-size:.58rem}.dayhead{flex-wrap:wrap}.daynav{margin-left:auto}}
+
 /* ===== Phone ===== */
 @media (max-width:640px){
   .edit-grid{grid-template-columns:150px 1fr}.edit-grid .note-in{grid-column:1/-1}.edit-grid .acts{grid-column:1/-1;justify-content:flex-end}
@@ -257,6 +287,7 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
           <div class="sub" id="daySub"></div>
         </div>
         <div class="daynav">
+          <button class="icon-btn" id="calBtn" aria-label="Open month calendar" aria-expanded="false" aria-controls="calCard" title="Month calendar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
           <button class="icon-btn" id="prevDay" aria-label="Previous day">◀</button>
           <button class="btn small" id="todayBtn">Today</button>
           <button class="icon-btn" id="nextDay" aria-label="Next day">▶</button>
@@ -265,6 +296,19 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
       <div class="progress">
         <div class="bar" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" id="bar"><div></div></div>
         <div class="count"><span id="countText">0 of 0 done</span><span id="pctText">0%</span></div>
+      </div>
+    </div>
+    <div class="card cal" id="calCard" hidden>
+      <div class="cal-head">
+        <button class="icon-btn" id="calPrev" aria-label="Previous month">◀</button>
+        <h2 id="calTitle" aria-live="polite">Month</h2>
+        <button class="icon-btn" id="calNext" aria-label="Next month">▶</button>
+      </div>
+      <div class="cal-grid cal-dow" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+      <div class="cal-grid" id="calGrid" role="grid" aria-labelledby="calTitle"></div>
+      <div class="cal-foot">
+        <div class="cal-legend" aria-label="Legend"><span class="muted">0%</span><i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i><i class="lv5"></i><span class="muted">100%</span><span class="cal-note-key"><i class="notedot"></i> day note</span></div>
+        <div class="cal-sum" id="calSum"></div>
       </div>
     </div>
     <div class="card">
@@ -525,6 +569,7 @@ function renderToday(){
   $('#todayBtn').disabled=diff===0;
   renderDayNote();
   renderStreaks();
+  if(calMonth&&!$('#calCard').hidden)renderCalendar();
   const asOf=cur<todayStr?cur:todayStr;
   const items=itemsFor(cur).map(i=>{if(!i.overdue&&(i.kind==='chore'||i.kind==='exercise')){const it=S[i.kind==='chore'?'chores':'exercises'].find(x=>i.key===i.kind+':'+x.id);if(it)i.streak=streakInfo(i.kind,it,asOf).cur;}return i;});
   const n=items.length,k=items.filter(i=>i.done).length,pct=n?Math.round(k/n*100):0;
@@ -811,6 +856,42 @@ function renderStreaks(){const today=ymd(new Date());
   const w=weekPct(today);$('#weekPct').textContent=w+'%';$('#weekBar').firstElementChild.style.width=w+'%';$('#weekBar').setAttribute('aria-valuenow',w);
   let top=null;[['chore',S.chores],['exercise',S.exercises]].forEach(([k,l])=>l.forEach(it=>{const st=streakInfo(k,it,today);if(st.cur>=1&&(!top||st.cur>top.n))top={n:st.cur,t:it.title};}));
   $('#topStreak').textContent=top?'🔥 '+top.n:'—';$('#topStreakLabel').textContent=top?'Best active: '+top.t.replace(/^Example:\s*/i,''):'Longest active streak';$('#topStreak').title=top?top.t:'';}
+
+// ---------- CALENDAR (month view; same per-day calc as streaks/perfect days) ----------
+let calMonth=null;
+function dayCompletion(ds,today){const items=countedItems(ds,today);const n=items.length,k=items.filter(i=>i.done).length;return {n,k,pct:n?Math.round(k/n*100):null};}
+function calLevel(p){return p===null?-1:p===0?0:p<25?1:p<50?2:p<75?3:p<100?4:5;}
+function renderCalendar(){
+  if($('#calCard').hidden)return;
+  const today=ymd(new Date()),start=dataStart(today);
+  const y=calMonth.getFullYear(),mo=calMonth.getMonth();
+  $('#calTitle').textContent=calMonth.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  const first=new Date(y,mo,1),lead=(first.getDay()+6)%7,days=new Date(y,mo+1,0).getDate();
+  const cells=[];let sum=0,cnt=0,perfect=0;
+  for(let i=0;i<Math.ceil((lead+days)/7)*7;i++){
+    const d=new Date(y,mo,1-lead+i),ds=ymd(d),inMonth=d.getMonth()===mo;
+    let cls='cal-day',label=d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'}),pctTxt='';
+    const tracked=start&&ds>=start&&ds<=today;
+    if(tracked){const c=dayCompletion(ds,today);
+      if(c.pct===null){cls+=' neutral';label+=', nothing scheduled';}
+      else{cls+=' lv'+calLevel(c.pct);pctTxt=c.pct+'%';label+=`, ${c.pct}% done (${c.k} of ${c.n})`;
+        if(inMonth){sum+=c.pct;cnt++;if(c.pct===100)perfect++;}}}
+    else{cls+=' neutral';label+=ds>today?', upcoming':', no data';}
+    if(!inMonth)cls+=' out';if(ds===today)cls+=' today';if(ds===cur)cls+=' sel';
+    const note=!!S.dayNotes[ds];if(note)label+=', has a day note';
+    cells.push(`<button type="button" class="${cls}" data-date="${ds}" aria-label="${esc(label)}" ${ds===today?'aria-current="date"':''}>${note?'<i class="notedot" aria-hidden="true"></i>':''}<span>${d.getDate()}</span>${pctTxt?`<span class="pct">${pctTxt}</span>`:''}</button>`);
+  }
+  $('#calGrid').innerHTML=cells.join('');
+  $('#calSum').innerHTML=cnt?`Avg <b>${Math.round(sum/cnt)}%</b> · Perfect days <b>${perfect}</b> · Tracked <b>${cnt}</b>`:'No tracked days this month';
+}
+function toggleCal(open){const c=$('#calCard');c.hidden=open===undefined?!c.hidden:!open;$('#calBtn').setAttribute('aria-expanded',!c.hidden);
+  if(!c.hidden){const d=parseYmd(cur);calMonth=new Date(d.getFullYear(),d.getMonth(),1);renderCalendar();}}
+$('#calBtn').onclick=()=>toggleCal();
+$('#calPrev').onclick=()=>{calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()-1,1);renderCalendar();};
+$('#calNext').onclick=()=>{calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,1);renderCalendar();};
+$('#calGrid').addEventListener('click',e=>{const b=e.target.closest('[data-date]');if(!b)return;flushSave();cur=b.dataset.date;toggleCal(false);renderToday();
+  $('#dayTitle').scrollIntoView({block:'nearest'});$('#calBtn').focus();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#calCard').hidden&&view==='today'){toggleCal(false);$('#calBtn').focus();}});
 
 function render(){renderHint();if(view==='today')renderToday();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();else if(view==='exercise')renderExercises();else if(view==='notes')renderNotes();else if(view==='todo')renderTodos();}
 // refresh "Today" label if the tab stays open past midnight
