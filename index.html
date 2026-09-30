@@ -253,6 +253,15 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 .ql-name{font-weight:700}
 .ql-total{font-weight:750;font-variant-numeric:tabular-nums}
 .ql-total.met{color:var(--ok)}
+.logsum{padding:10px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.logsum .ls-title{font-weight:700;font-size:.85rem;color:var(--muted);margin-right:4px}
+.lpill{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--row);color:var(--text);font:inherit;font-size:.88rem;cursor:pointer;max-width:100%}
+.lpill:hover{background:var(--row-hover)}.lpill:focus-visible{outline:2px solid var(--accent-line);outline-offset:2px}
+.lpill i{width:8px;height:8px;border-radius:50%;background:var(--ex);flex:none}
+.lpill .ln{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.lpill b{font-variant-numeric:tabular-nums;white-space:nowrap}.lpill.met b{color:var(--ok)}
+.lpill .lu{color:var(--muted);white-space:nowrap}
+.logsum.empty{padding:6px 14px}.logsum .ls-link{background:none;border:0;color:var(--accent-text);font:inherit;font-size:.85rem;font-weight:650;cursor:pointer;min-height:44px;padding:0 6px;text-decoration:underline;text-underline-offset:3px}
 .ql-sub{font-size:.8rem;color:var(--muted)}
 .ql-btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn.preset{min-width:70px;font-size:1.05rem;font-weight:800;border:2px solid color-mix(in srgb,var(--accent-line) 55%,var(--line));background:var(--card)}
@@ -354,6 +363,7 @@ select{appearance:auto}
         <div class="bar" role="progressbar" aria-label="This week done" aria-valuemin="0" aria-valuemax="100" id="weekBar"><div></div></div></div>
       <div class="stat"><div class="stat-num" id="topStreak">—</div><div class="stat-label" id="topStreakLabel">Longest active streak</div></div>
     </div>
+    <div class="card logsum" id="logSum" aria-live="polite"></div>
     <div class="card">
       <div class="dayhead">
         <div>
@@ -736,6 +746,7 @@ function renderToday(){
   $('#todayBtn').disabled=diff===0;
   renderDayNote();
   renderStreaks();
+  renderLogSummary();
   if(calMonth&&!$('#calCard').hidden)renderCalendar();
   const asOf=cur<todayStr?cur:todayStr;
   const items=itemsFor(cur).map(i=>{if(!i.overdue&&(i.kind==='chore'||i.kind==='exercise')){const it=S[i.kind==='chore'?'chores':'exercises'].find(x=>i.key===i.kind+':'+x.id);if(it)i.streak=streakInfo(i.kind,it,asOf).cur;}return i;});
@@ -1235,6 +1246,16 @@ function writeLog(ex,ds,list,msg){const prev=dayTotal(ex.id,ds);S.logs=S.logs||{
   save();render();toast(checked?`Target reached — ${ex.title} checked off 🎉`:msg);}
 function addLog(ex,amt){if(cur>ymd(new Date())){toast('You can’t log amounts for future days');return;}
   writeLog(ex,cur,dayLog(ex.id,cur).concat([{t:Date.now(),a:amt}]),`+${fmtAmt(amt)} ${ex.unit} · ${ex.title} ${fmtAmt(dayTotal(ex.id,cur)+amt)} total`);}
+const UNIT_SHORT={miles:'mi',minutes:'min'};
+function renderLogSummary(){const el=$('#logSum'),d=parseYmd(cur),diff=Math.round((d-parseYmd(ymd(new Date())))/864e5);
+  const when=diff===0?'today':diff===-1?'yesterday':diff===1?'tomorrow':DAY_NAMES[d.getDay()];
+  const items=S.exercises.map(ex=>({ex,t:dayTotal(ex.id,cur)})).filter(o=>o.t>0);
+  el.classList.toggle('empty',!items.length);
+  if(!items.length){el.innerHTML=`<span class="ls-title">Nothing logged ${when==='today'?'yet':when==='tomorrow'?'yet':'on '+when}</span>${S.exercises.some(x=>x.unit)?'<span class="muted small">·</span><button type="button" class="ls-link" data-open-log>Open Log</button>':''}`;return;}
+  el.innerHTML=`<span class="ls-title">Logged ${when}</span>`+items.map(({ex,t})=>{const met=ex.target&&t>=ex.target,u=ex.unit?(UNIT_SHORT[ex.unit]||ex.unit):'';
+    return `<button type="button" class="lpill${met?' met':''}" data-logex="${ex.id}" aria-label="${esc(ex.title)}: ${fmtAmt(t)}${ex.target?' of '+fmtAmt(ex.target):''} ${esc(ex.unit||'')}${met?', target reached':''}. Open in Log" data-total="${t}"><i aria-hidden="true"></i><span class="ln">${esc(ex.title)}</span><b>${fmtAmt(t)}${ex.target?' / '+fmtAmt(ex.target):''}</b>${u?`<span class="lu">${esc(u)}</span>`:''}${met?'<span aria-hidden="true" style="color:var(--ok)">✓</span>':''}</button>`;}).join('');}
+$('#logSum').addEventListener('click',e=>{const p=e.target.closest('[data-logex]');if(p){showView('log');const box=$('#qlogList').querySelector(`[data-ex="${p.dataset.logex}"]`);if(box){box.scrollIntoView({block:'center'});const f=box.querySelector('.log-in,[data-ql]');f&&f.focus({preventScroll:true});}return;}
+  if(e.target.closest('[data-open-log]'))showView('log');});
 function renderQuickLog(){const list=S.exercises.filter(x=>x.unit);
   const d=parseYmd(cur),diff=Math.round((d-parseYmd(ymd(new Date())))/864e5);
   $('#logTitle').textContent=diff===0?'Today':diff===1?'Tomorrow':diff===-1?'Yesterday':DAY_NAMES[d.getDay()];
