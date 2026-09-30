@@ -72,7 +72,7 @@ h2{font-size:1.2rem;margin:0 0 12px;letter-spacing:-.01em}
 .icon-btn[data-a="del"]:hover:not(:disabled),.del-task:hover{color:var(--danger)}
 
 /* ===== Fields ===== */
-input[type=text],input[type=time],textarea,select{border:1px solid var(--line);background:var(--field);border-radius:14px;padding:12px 14px;min-height:var(--tap);width:100%}
+input[type=text],input[type=time],textarea,select{min-width:0;border:1px solid var(--line);background:var(--field);border-radius:14px;padding:12px 14px;min-height:var(--tap);width:100%}
 input::placeholder,textarea::placeholder{color:var(--faint);opacity:1}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent-line);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
 textarea{resize:none;overflow:hidden;line-height:1.5;min-height:96px;display:block}
@@ -177,6 +177,20 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 .dot-has{width:9px;height:9px;border-radius:50%;background:var(--muted)}
 .savestate{margin-left:auto;font-size:.82rem;font-weight:500;color:var(--muted)}
 
+/* ===== Streaks ===== */
+:root{--flame:#ea580c;--flame-text:#9a3412}
+[data-theme="dark"]{--flame:#fb923c;--flame-text:#fdba74}
+.flame{display:inline-flex;align-items:center;gap:2px;margin-left:8px;padding:1px 9px;border-radius:99px;font-size:.74rem;font-weight:750;vertical-align:2px;white-space:nowrap;
+  background:color-mix(in srgb,var(--flame) 14%,transparent);color:var(--flame-text)}
+.streaks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px}
+.stat{background:var(--row);border:2px solid var(--line);border-radius:var(--rrow);padding:10px 14px;min-width:0}
+.stat-num{font-size:1.35rem;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-label{font-size:.8rem;color:var(--muted);font-weight:600}
+.stat .bar{height:8px;margin-top:6px}
+.streak-line{font-size:.84rem;color:var(--muted);font-weight:600}
+.streak-line b{color:var(--flame-text)}
+@media (max-width:560px){.streaks{grid-template-columns:1fr 1fr;padding:10px;gap:8px}.streaks .stat:last-child{grid-column:1/-1}.stat{padding:8px 12px}.stat-num{font-size:1.2rem}}
+
 /* ===== Phone ===== */
 @media (max-width:640px){
   .edit-grid{grid-template-columns:150px 1fr}.edit-grid .note-in{grid-column:1/-1}.edit-grid .acts{grid-column:1/-1;justify-content:flex-end}
@@ -189,7 +203,9 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
   nav.tabs .lg{display:none}
   .card{padding:14px}
   form.quick{grid-template-columns:1fr 140px}form.quick .btn{grid-column:1/-1}
-  .chore-top{grid-template-columns:1fr auto}.chore-top input[data-f=title]{grid-column:1/-1}
+  .chore-top{grid-template-columns:minmax(0,1fr) auto}.chore-top input[data-f=title]{grid-column:1/-1}
+  .chore-top input[type=time]{min-width:0}
+  .chore-top .acts .icon-btn{width:48px}
   ul.items li{gap:4px;padding:2px 4px 2px 6px}
   .time{min-width:64px;font-size:.8rem}
   ul.items li.k-todo .time,ul.items li.overdue .time{font-size:.62rem;letter-spacing:.02em}
@@ -228,6 +244,12 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 
   <!-- TODAY -->
   <section id="view-today" role="tabpanel" aria-labelledby="tab-today">
+    <div class="card streaks" id="streakCard" aria-label="Streaks">
+      <div class="stat"><div class="stat-num" id="perfectNum">0</div><div class="stat-label">Perfect-day streak</div></div>
+      <div class="stat"><div class="stat-num" id="weekPct">0%</div><div class="stat-label">This week done</div>
+        <div class="bar" role="progressbar" aria-label="This week done" aria-valuemin="0" aria-valuemax="100" id="weekBar"><div></div></div></div>
+      <div class="stat"><div class="stat-num" id="topStreak">—</div><div class="stat-label" id="topStreakLabel">Longest active streak</div></div>
+    </div>
     <div class="card">
       <div class="dayhead">
         <div>
@@ -407,7 +429,7 @@ function normalize(d){
   out.theme=['auto','light','dark'].includes(d.theme)?d.theme:'auto';
   for(let i=0;i<7;i++) out.plan[i]=Array.isArray(d.plan&&d.plan[i])?d.plan[i].filter(x=>x&&x.title).map(x=>({id:x.id||uid(),time:x.time||'',title:String(x.title),note:x.note?String(x.note):''})):[];
   out.chores=Array.isArray(d.chores)?d.chores.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||'',createdAt:/^\d{4}-\d{2}-\d{2}$/.test(c.createdAt)?c.createdAt:ymd(new Date())})):[];
-  out.exercises=Array.isArray(d.exercises)?d.exercises.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||'',note:c.note?String(c.note):''})):[];
+  out.exercises=Array.isArray(d.exercises)?d.exercises.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||'',note:c.note?String(c.note):'',...(/^\d{4}-\d{2}-\d{2}$/.test(c.createdAt)?{createdAt:c.createdAt}:{})})):[];
   const isD=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v);
   out.todos=Array.isArray(d.todos)?d.todos.filter(t=>t&&typeof t==='object'&&t.title!==undefined).map(t=>({id:t.id||uid(),title:String(t.title),note:t.note?String(t.note):'',created:isD(t.created)?t.created:ymd(new Date()),completed:isD(t.completed)?t.completed:null})):[];
   out.notes=Array.isArray(d.notes)?d.notes.filter(n=>n&&typeof n==='object').map(n=>({id:n.id||uid(),title:n.title?String(n.title):'',body:n.body?String(n.body):'',updated:Number(n.updated)||Date.now()})):[];
@@ -502,7 +524,9 @@ function renderToday(){
   $('#daySub').textContent=d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   $('#todayBtn').disabled=diff===0;
   renderDayNote();
-  const items=itemsFor(cur);
+  renderStreaks();
+  const asOf=cur<todayStr?cur:todayStr;
+  const items=itemsFor(cur).map(i=>{if(!i.overdue&&(i.kind==='chore'||i.kind==='exercise')){const it=S[i.kind==='chore'?'chores':'exercises'].find(x=>i.key===i.kind+':'+x.id);if(it)i.streak=streakInfo(i.kind,it,asOf).cur;}return i;});
   const n=items.length,k=items.filter(i=>i.done).length,pct=n?Math.round(k/n*100):0;
   $('#bar').firstElementChild.style.width=pct+'%';$('#bar').setAttribute('aria-valuenow',pct);
   $('#countText').textContent=`${k} of ${n} done`+(n&&k===n?' — all done! 🎉':'');$('#pctText').textContent=pct+'%';
@@ -511,7 +535,7 @@ function renderToday(){
   ul.innerHTML=items.map(i=>{const cid='c_'+i.key.replace(':','_');return `<li class="k-${i.kind} ${i.overdue?'overdue':''} ${i.done?'done':''}" data-key="${esc(i.key)}">
     <input type="checkbox" class="chk" id="${cid}" ${i.done?'checked':''} aria-label="${esc(i.title)}${i.overdue?' ('+esc(i.note)+')':''}">
     <span class="time">${i.overdue?'Overdue':i.kind==='todo'?'To-Do':i.time?fmtTime(i.time):'—'}</span>
-    <label class="item-main" for="${cid}"><div class="item-title">${esc(i.title)}</div>${i.note?`<div class="item-note">${esc(i.note)}</div>`:''}${i.age?`<div class="todo-age">${esc(i.age)}</div>`:''}</label>
+    <label class="item-main" for="${cid}"><div class="item-title">${esc(i.title)}${i.streak>=2?`<span class="flame" title="${i.streak} in a row" aria-label="${i.streak} in a row">🔥 ${i.streak}</span>`:''}</div>${i.note?`<div class="item-note">${esc(i.note)}</div>`:''}${i.age?`<div class="todo-age">${esc(i.age)}</div>`:''}</label>
     <span class="tag ${i.kind}">${i.overdue?'Missed chore':i.kind==='todo'?'To-Do':i.kind}</span>
     ${i.kind==='task'?`<button class="icon-btn del-task" data-id="${esc(i.id)}" aria-label="Delete task ${esc(i.title)}">✕</button>`:'<span class="spacer" style="width:54px;flex:none" aria-hidden="true"></span>'}
   </li>`;}).join('');
@@ -615,6 +639,7 @@ function renderRec(kind){
       ${ORDER.map(d=>`<label class="pill"><input type="checkbox" data-day="${d}" ${c.days.includes(d)?'checked':''} aria-label="${DAY_NAMES[d]}"><span>${SHORT[d]}</span></label>`).join('')}
       <button class="btn small" data-a="every">${c.days.length===7?'Clear days':'Every day'}</button>
     </div>
+    ${(()=>{const st=streakInfo(kind,c,ymd(new Date()));return `<div class="streak-line">🔥 Current streak <b>${st.cur}</b> · Best <b>${st.best}</b></div>`;})()}
     ${c.days.length?'':`<div class="muted" style="font-size:.88rem">⚠ No days selected — this ${R.noun} won’t appear anywhere.</div>`}
   </div>`).join(''):`<div class="empty">No ${R.noun==='chore'?'chores':'exercises'} yet.</div>`;
 }
@@ -633,7 +658,7 @@ Object.keys(REC).forEach(kind=>{const R=REC[kind];const find=id=>S[R.store].find
       const nb=$(R.list).querySelector(`[data-id="${c.id}"] [data-a="${b.dataset.a}"]`);const fb=$(R.list).querySelector(`[data-id="${c.id}"] [data-a="${b.dataset.a==='up'?'down':'up'}"]`);
       ((nb&&!nb.disabled)?nb:fb).focus();return;}
     save();renderRec(kind);renderHint();});
-  $(R.add).onclick=()=>{const item={id:uid(),title:'New '+R.noun,days:[],time:''};if(R.note)item.note='';if(kind==='chore')item.createdAt=ymd(new Date());S[R.store].push(item);save();renderRec(kind);
+  $(R.add).onclick=()=>{const item={id:uid(),title:'New '+R.noun,days:[],time:''};if(R.note)item.note='';item.createdAt=ymd(new Date());S[R.store].push(item);save();renderRec(kind);
     const inp=$(R.list).lastElementChild.querySelector('input[data-f=title]');inp.focus();inp.select();};
 });
 
@@ -746,6 +771,46 @@ $('#clearDoneTodos').onclick=()=>{const n=S.todos.filter(t=>t.completed).length;
   S.todos=S.todos.filter(t=>!t.completed);save();renderTodos();toast('Completed to-dos cleared');};
 function scrollTabIntoView(b){const n=b.parentElement;if(n.scrollWidth<=n.clientWidth)return;
   const l=b.offsetLeft,r=l+b.offsetWidth;if(l<n.scrollLeft+24)n.scrollLeft=Math.max(0,l-24);else if(r>n.scrollLeft+n.clientWidth-24)n.scrollLeft=r-n.clientWidth+24;}
+
+// ---------- STREAKS (computed from check marks; nothing stored) ----------
+// Occurrence done = its own check mark on that date. A missed chore later cleared via rollover sets that
+// original date's check mark, so it counts as done for its original date (the streak "heals" once cleared;
+// while it is still overdue the streak is broken). Unscheduled days are skipped. The as-of day never
+// breaks a streak when not done yet (it only adds when done). Occurrences before the item's start are ignored;
+// start = earlier of createdAt and its earliest check mark (older items without createdAt use the latter).
+function shiftYmd(ds,n){const d=parseYmd(ds);d.setDate(d.getDate()+n);return ymd(d);}
+function earliestDone(key){let m=null;for(const d in S.done){if(S.done[d]&&S.done[d][key]&&(!m||d<m))m=d;}return m;}
+function itemStart(kind,it){const e=earliestDone(kind+':'+it.id),c=it.createdAt;if(c&&e)return c<e?c:e;return c||e||null;}
+function streakInfo(kind,it,asOf){
+  const start=itemStart(kind,it);if(!start||!it.days.length||start>asOf)return {cur:0,best:0};
+  const key=kind+':'+it.id;let run=0,best=0;
+  for(const d=parseYmd(start);;d.setDate(d.getDate()+1)){const ds=ymd(d);if(ds>asOf)break;
+    if(!it.days.includes(d.getDay()))continue;
+    if(S.done[ds]&&S.done[ds][key]){run++;if(run>best)best=run;}
+    else if(ds!==asOf)run=0;}
+  return {cur:run,best};
+}
+function dataStart(today){let m=null;const add=d=>{if(typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&d<=today&&(!m||d<m))m=d;};
+  Object.keys(S.done).forEach(d=>{if(S.done[d]&&Object.keys(S.done[d]).length)add(d);});
+  Object.keys(S.tasks).forEach(d=>{if((S.tasks[d]||[]).length)add(d);});
+  Object.keys(S.dayNotes).forEach(add);S.todos.forEach(t=>add(t.created));S.chores.forEach(c=>add(c.createdAt));S.exercises.forEach(c=>add(c.createdAt));
+  return m;}
+// items that count for a day's completeness (chores/exercises only from their start date)
+function countedItems(ds,today){const starts={};S.chores.forEach(c=>starts['chore:'+c.id]=itemStart('chore',c)||today);S.exercises.forEach(c=>starts['exercise:'+c.id]=itemStart('exercise',c)||today);
+  return itemsFor(ds).filter(i=>!(i.key in starts)||starts[i.key]<=ds);}
+function perfectStreak(today){const start=dataStart(today);if(!start)return 0;let n=0;
+  for(let ds=today;ds>=start;ds=shiftYmd(ds,-1)){const items=countedItems(ds,today);if(!items.length)continue;
+    if(items.every(i=>i.done))n++;else if(ds!==today)break;}
+  return n;}
+// This week (Mon..today): scheduled plan/chore/exercise/one-off task occurrences done (overdue repeats and to-dos excluded to avoid double counting)
+function weekPct(today){let tot=0,done=0;const t=parseYmd(today);let ds=shiftYmd(today,-((t.getDay()+6)%7));
+  for(;ds<=today;ds=shiftYmd(ds,1))countedItems(ds,today).forEach(i=>{if(i.overdue||i.kind==='todo')return;tot++;if(i.done)done++;});
+  return tot?Math.round(done/tot*100):0;}
+function renderStreaks(){const today=ymd(new Date());
+  const p=perfectStreak(today);$('#perfectNum').textContent=(p>=1?'🔥 ':'')+p+(p===1?' day':' days');
+  const w=weekPct(today);$('#weekPct').textContent=w+'%';$('#weekBar').firstElementChild.style.width=w+'%';$('#weekBar').setAttribute('aria-valuenow',w);
+  let top=null;[['chore',S.chores],['exercise',S.exercises]].forEach(([k,l])=>l.forEach(it=>{const st=streakInfo(k,it,today);if(st.cur>=1&&(!top||st.cur>top.n))top={n:st.cur,t:it.title};}));
+  $('#topStreak').textContent=top?'🔥 '+top.n:'—';$('#topStreakLabel').textContent=top?'Best active: '+top.t.replace(/^Example:\s*/i,''):'Longest active streak';$('#topStreak').title=top?top.t:'';}
 
 function render(){renderHint();if(view==='today')renderToday();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();else if(view==='exercise')renderExercises();else if(view==='notes')renderNotes();else if(view==='todo')renderTodos();}
 // refresh "Today" label if the tab stays open past midnight
