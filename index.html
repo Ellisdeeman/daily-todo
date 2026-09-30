@@ -247,11 +247,6 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 @media (max-width:560px){.choice-grid{grid-template-columns:1fr}.sync-ind-text{display:none}.sync-ind{padding:0 10px}}
 
 /* ===== Logging & Stats ===== */
-.qlog summary{cursor:pointer;font-weight:700;min-height:var(--tap);display:flex;align-items:center;gap:10px;flex-wrap:wrap;list-style:none;border-radius:12px}
-.qlog summary::-webkit-details-marker{display:none}
-.qlog summary::before{content:"▸";transition:transform .15s;color:var(--muted)}
-.qlog[open] summary::before{transform:rotate(90deg)}
-.qlog summary .small{font-weight:500}
 .ql-ex{background:var(--row);border:2px solid var(--line);border-radius:var(--rrow);padding:10px 12px;margin-top:10px;box-shadow:inset 5px 0 0 var(--ex)}
 .ql-ex:focus-within{border-color:var(--accent-line)}
 .ql-head{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-bottom:8px}
@@ -333,6 +328,7 @@ select{appearance:auto}
     <div class="brand"><span class="dot" aria-hidden="true"></span>Daily To-Do</div>
     <nav class="tabs" role="tablist" aria-label="Views">
         <button role="tab" id="tab-today" aria-controls="view-today" aria-selected="true" data-view="today">Today</button>
+        <button role="tab" id="tab-log" aria-controls="view-log" aria-selected="false" data-view="log">Log</button>
         <button role="tab" id="tab-todo" aria-controls="view-todo" aria-selected="false" data-view="todo">To-Do</button>
         <button role="tab" id="tab-plan" aria-controls="view-plan" aria-selected="false" data-view="plan"><span class="lg">Weekly </span>Plan</button>
         <button role="tab" id="tab-chores" aria-controls="view-chores" aria-selected="false" data-view="chores">Chores</button>
@@ -389,10 +385,6 @@ select{appearance:auto}
         <div class="cal-sum" id="calSum"></div>
       </div>
     </div>
-    <details class="card qlog" id="qlogCard" open hidden>
-      <summary><span>Quick log</span><span class="muted small" id="qlogHint">Add amounts any time — even on days an exercise isn’t scheduled</span></summary>
-      <div id="qlogList"></div>
-    </details>
     <div class="card">
       <form class="quick" id="quickForm" autocomplete="off">
         <label class="sr-only" for="quickTitle">New task</label>
@@ -416,6 +408,29 @@ select{appearance:auto}
   </section>
 
   <!-- TO-DO -->
+  <section id="view-log" role="tabpanel" aria-labelledby="tab-log" hidden>
+    <div class="card">
+      <div class="dayhead">
+        <div>
+          <h1 id="logTitle">Log</h1>
+          <div class="sub" id="logSub"></div>
+        </div>
+        <div class="daynav">
+          <button class="icon-btn" id="logPrev" aria-label="Previous day">◀</button>
+          <button class="btn small" id="logToday">Today</button>
+          <button class="icon-btn" id="logNext" aria-label="Next day">▶</button>
+        </div>
+      </div>
+      <p class="muted small" id="qlogHint" style="margin:10px 0 0">Add amounts any time — even on days an exercise isn’t scheduled</p>
+    </div>
+    <div class="card qlog" id="qlogCard"><div id="qlogList"></div></div>
+    <div class="card empty-card" id="logEmpty" hidden>
+      <h2 style="margin:0 0 6px">Nothing to log yet</h2>
+      <p class="muted" style="margin:0 0 12px">Give an exercise a unit (reps, miles, minutes…) in the Exercise tab and it will show up here with one-tap +5 / +10 / +20 buttons.</p>
+      <button type="button" class="btn primary" id="logGoEx">Open Exercise tab</button>
+    </div>
+  </section>
+
   <section id="view-todo" role="tabpanel" aria-labelledby="tab-todo" hidden>
     <div class="card">
       <h2>To-Do</h2>
@@ -662,7 +677,7 @@ applyTheme();
 let view='today';
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 function showView(v){flushSave();view=v;document.querySelectorAll('nav.tabs button').forEach(b=>{b.setAttribute('aria-selected',b.dataset.view===v);if(b.dataset.view===v)scrollTabIntoView(b);});
-  ['today','todo','plan','chores','exercise','stats','notes','data'].forEach(x=>$('#view-'+x).hidden=x!==v);render();}
+  ['today','log','todo','plan','chores','exercise','stats','notes','data'].forEach(x=>$('#view-'+x).hidden=x!==v);render();}
 
 // ---------- example hint ----------
 function hasExamples(){return Object.values(S.plan).some(l=>l.some(i=>/^Example:/i.test(i.title)))||S.chores.some(c=>/^Example:/i.test(c.title))||S.exercises.some(c=>/^Example:/i.test(c.title));}
@@ -721,7 +736,6 @@ function renderToday(){
   $('#todayBtn').disabled=diff===0;
   renderDayNote();
   renderStreaks();
-  renderQuickLog();
   if(calMonth&&!$('#calCard').hidden)renderCalendar();
   const asOf=cur<todayStr?cur:todayStr;
   const items=itemsFor(cur).map(i=>{if(!i.overdue&&(i.kind==='chore'||i.kind==='exercise')){const it=S[i.kind==='chore'?'chores':'exercises'].find(x=>i.key===i.kind+':'+x.id);if(it)i.streak=streakInfo(i.kind,it,asOf).cur;}return i;});
@@ -761,9 +775,9 @@ $('#itemList').addEventListener('click',e=>{const b=e.target.closest('.del-task'
 $('#quickForm').onsubmit=e=>{e.preventDefault();const t=$('#quickTitle').value.trim();if(!t)return;
   (S.tasks[cur]=S.tasks[cur]||[]).push({id:uid(),title:t,time:$('#quickTime').value||''});save();
   $('#quickTitle').value='';$('#quickTime').value='';renderToday();$('#quickTitle').focus();toast('Task added');};
-function shift(n){flushSave();const d=parseYmd(cur);d.setDate(d.getDate()+n);cur=ymd(d);renderToday();}
+function shift(n){flushSave();const d=parseYmd(cur);d.setDate(d.getDate()+n);cur=ymd(d);render();}
 $('#prevDay').onclick=()=>shift(-1);$('#nextDay').onclick=()=>shift(1);$('#todayBtn').onclick=()=>{flushSave();cur=ymd(new Date());renderToday();};
-document.addEventListener('keydown',e=>{if(view!=='today'||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+document.addEventListener('keydown',e=>{if((view!=='today'&&view!=='log')||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
   if(e.key==='ArrowLeft')shift(-1);else if(e.key==='ArrowRight')shift(1);});
 
 // ---------- PLAN ----------
@@ -1218,10 +1232,14 @@ function writeLog(ex,ds,list,msg){const prev=dayTotal(ex.id,ds);S.logs=S.logs||{
   if(list.length)S.logs[ds][ex.id]=list;else delete S.logs[ds][ex.id];if(!Object.keys(S.logs[ds]).length)delete S.logs[ds];
   const now=dayTotal(ex.id,ds);let checked=false;
   if(ex.target&&prev<ex.target&&now>=ex.target&&isScheduled(ex,ds)){(S.done[ds]=S.done[ds]||{})['exercise:'+ex.id]=true;checked=true;}
-  save();renderToday();if(view==='stats')renderStats();toast(checked?`Target reached — ${ex.title} checked off 🎉`:msg);}
+  save();render();toast(checked?`Target reached — ${ex.title} checked off 🎉`:msg);}
 function addLog(ex,amt){if(cur>ymd(new Date())){toast('You can’t log amounts for future days');return;}
   writeLog(ex,cur,dayLog(ex.id,cur).concat([{t:Date.now(),a:amt}]),`+${fmtAmt(amt)} ${ex.unit} · ${ex.title} ${fmtAmt(dayTotal(ex.id,cur)+amt)} total`);}
-function renderQuickLog(){const list=S.exercises.filter(x=>x.unit),card=$('#qlogCard');card.hidden=!list.length;if(!list.length)return;
+function renderQuickLog(){const list=S.exercises.filter(x=>x.unit);
+  const d=parseYmd(cur),diff=Math.round((d-parseYmd(ymd(new Date())))/864e5);
+  $('#logTitle').textContent=diff===0?'Today':diff===1?'Tomorrow':diff===-1?'Yesterday':DAY_NAMES[d.getDay()];
+  $('#logSub').textContent=d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});$('#logToday').disabled=diff===0;
+  $('#qlogCard').hidden=!list.length;$('#logEmpty').hidden=!!list.length;$('#qlogHint').hidden=!list.length;if(!list.length){$('#qlogList').innerHTML='';return;}
   const future=cur>ymd(new Date());$('#qlogHint').textContent=future?'Future day — logging opens on the day':'Add amounts any time — even on days an exercise isn’t scheduled';
   const act=document.activeElement,keep=act&&act.closest&&act.closest('#qlogList [data-ex]')?[act.closest('[data-ex]').dataset.ex,act.matches('.log-in')?'.log-in':act.dataset.add?`[data-add="${act.dataset.add}"]`:null]:null;
   $('#qlogList').innerHTML=list.map(ex=>{const l=dayLog(ex.id,cur);return `<div class="ql-ex" data-ex="${ex.id}">
@@ -1232,15 +1250,18 @@ function renderQuickLog(){const list=S.exercises.filter(x=>x.unit),card=$('#qlog
     ${l.length?`<div class="ql-entries" aria-label="Entries">${l.map((e,k)=>`<span class="entry">${e.t?new Date(e.t).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}):''} ${e.set?'=':'+'}${fmtAmt(e.a)}<button type="button" class="icon-btn" data-del-entry="${k}" aria-label="Remove entry ${e.set?'':'+'}${fmtAmt(e.a)}">✕</button></span>`).join('')}</div>`:''}
   </div>`;}).join('');
   if(keep&&keep[1]){const el=$('#qlogList').querySelector(`[data-ex="${keep[0]}"] ${keep[1]}`);el&&el.focus();}}
-$('#view-today').addEventListener('click',e=>{const box=e.target.closest('[data-ex]');if(!box)return;const ex=S.exercises.find(x=>x.id===box.dataset.ex);if(!ex)return;
+const logClick=e=>{const box=e.target.closest('[data-ex]');if(!box)return;const ex=S.exercises.find(x=>x.id===box.dataset.ex);if(!ex)return;
   const pre=e.target.closest('[data-add]');if(pre){addLog(ex,parseFloat(pre.dataset.add));return;}
   const del=e.target.closest('[data-del-entry]');if(del){const l=dayLog(ex.id,cur).slice();const [r]=l.splice(+del.dataset.delEntry,1);writeLog(ex,cur,l,`Removed ${fmtAmt(r.a)} ${ex.unit}`);return;}
   const b=e.target.closest('[data-ql]');if(!b)return;
   if(b.dataset.ql==='add'){const inp=box.querySelector('.log-in');const n=parseAmt(inp.value);if(!n){toast('Enter an amount, e.g. 15');inp.focus();return;}const inRow=!!box.closest('#itemList');addLog(ex,n);
     const again=(inRow?$('#itemList'):$('#qlogList')).querySelector(`[data-ex="${ex.id}"] .log-in`);again&&again.focus();}
   if(b.dataset.ql==='edit'){const v=prompt(`Set today’s total for ${ex.title} (${ex.unit}).\nLeave empty to clear all entries.`,fmtAmt(dayTotal(ex.id,cur)));if(v===null)return;
-    const n=parseAmt(v);writeLog(ex,cur,n?[{t:Date.now(),a:n,set:true}]:[],n?`Total set to ${fmtAmt(n)} ${ex.unit}`:'Entries cleared');}});
-$('#view-today').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('.log-in')){e.preventDefault();const box=e.target.closest('[data-ex]');box.querySelector('[data-ql="add"]').click();}});
+    const n=parseAmt(v);writeLog(ex,cur,n?[{t:Date.now(),a:n,set:true}]:[],n?`Total set to ${fmtAmt(n)} ${ex.unit}`:'Entries cleared');}};
+const logKey=e=>{if(e.key==='Enter'&&e.target.matches('.log-in')){e.preventDefault();const box=e.target.closest('[data-ex]');box.querySelector('[data-ql="add"]').click();}};
+['#view-today','#view-log'].forEach(v=>{$(v).addEventListener('click',logClick);$(v).addEventListener('keydown',logKey);});
+$('#logPrev').onclick=()=>shift(-1);$('#logNext').onclick=()=>shift(1);$('#logToday').onclick=()=>{flushSave();cur=ymd(new Date());render();};
+$('#logGoEx').onclick=()=>showView('exercise');
 
 // ---------- STATS ----------
 let statsPeriod='week',chartDays=7;
@@ -1288,9 +1309,9 @@ function renderHabits(today){const start=dataStart(today),rows=[];
 $('#statsPeriod').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;statsPeriod=b.dataset.p;renderStats();});
 $('#chartRange').addEventListener('click',e=>{const b=e.target.closest('[data-n]');if(!b)return;chartDays=+b.dataset.n;renderStats();});
 
-function render(){renderHint();if(view==='today')renderToday();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();else if(view==='exercise')renderExercises();else if(view==='notes')renderNotes();else if(view==='todo')renderTodos();else if(view==='stats')renderStats();}
+function render(){renderHint();if(view==='today')renderToday();else if(view==='log')renderQuickLog();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();else if(view==='exercise')renderExercises();else if(view==='notes')renderNotes();else if(view==='todo')renderTodos();else if(view==='stats')renderStats();}
 // refresh "Today" label if the tab stays open past midnight
-let lastToday=ymd(new Date());setInterval(()=>{const t=ymd(new Date());if(t!==lastToday){if(cur===lastToday)cur=t;lastToday=t;if(view==='today')renderToday();}},60000);
+let lastToday=ymd(new Date());setInterval(()=>{const t=ymd(new Date());if(t!==lastToday){if(cur===lastToday)cur=t;lastToday=t;if(view==='today'||view==='log')render();}},60000);
 render();
 })();
 </script>
