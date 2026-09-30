@@ -14,7 +14,7 @@
   --text:#111827;--muted:#4b5563;--faint:#6b7280;
   --accent:#2dd4bf;--accent-ink:#0e1116;--accent-line:#0d9488;--accent-text:#0f766e;
   --ok:#15803d;--ok-fill:#16a34a;--danger:#b91c1c;
-  --plan:#2563eb;--chore:#c2410c;--task:#7c3aed;--ex:#be123c;--todo:#d97706;
+  --plan:#2563eb;--chore:#c2410c;--task:#7c3aed;--ex:#be123c;--todo:#d97706;--water:#0284c7;--water-text:#0369a1;
   --tint:0%;/* text tint toward white for type pills */
   --shadow:0 1px 2px rgba(16,24,40,.04);
   --radius:16px;--rrow:14px;--tap:54px;
@@ -25,7 +25,7 @@
   --text:#e6e9ef;--muted:#a3adbb;--faint:#8b95a5;
   --accent:#2dd4bf;--accent-ink:#0e1116;--accent-line:#2dd4bf;--accent-text:#2dd4bf;
   --ok:#4ade80;--ok-fill:#22c55e;--danger:#f87171;
-  --plan:#60a5fa;--chore:#fb923c;--task:#a78bfa;--ex:#fb7185;--todo:#fbbf24;
+  --plan:#60a5fa;--chore:#fb923c;--task:#a78bfa;--ex:#fb7185;--todo:#fbbf24;--water:#38bdf8;--water-text:#7dd3fc;
   --shadow:none;
 }
 *{box-sizing:border-box}
@@ -253,6 +253,15 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 .ql-name{font-weight:700}
 .ql-total{font-weight:750;font-variant-numeric:tabular-nums}
 .ql-total.met{color:var(--ok)}
+.water-card{box-shadow:inset 6px 0 0 var(--water),var(--shadow)}
+.water-box .ql-head{margin-bottom:10px}.w-title{margin:0;font-size:1.15rem;display:flex;gap:6px;align-items:center}
+.w-total{font-size:1.1rem;color:var(--water-text)}.w-total.met{color:var(--ok)}
+.w-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.w-bar{height:14px;margin:0 0 6px}.w-bar.met>div{background:var(--ok-fill)}
+.w-left{margin-bottom:10px}
+.btn.wpreset{border-color:color-mix(in srgb,var(--water) 70%,var(--line))}
+.st-water{box-shadow:inset 5px 0 0 var(--water)}
+.lpill.wpill i{background:var(--water)}
 .logsum{padding:10px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .logsum .ls-title{font-weight:700;font-size:.85rem;color:var(--muted);margin-right:4px}
 .lpill{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--row);color:var(--text);font:inherit;font-size:.88rem;cursor:pointer;max-width:100%}
@@ -433,9 +442,10 @@ select{appearance:auto}
       </div>
       <p class="muted small" id="qlogHint" style="margin:10px 0 0">Add amounts any time — even on days an exercise isn’t scheduled</p>
     </div>
+    <div class="card water-card" id="waterCard"></div>
     <div class="card qlog" id="qlogCard"><div id="qlogList"></div></div>
     <div class="card empty-card" id="logEmpty" hidden>
-      <h2 style="margin:0 0 6px">Nothing to log yet</h2>
+      <h2 style="margin:0 0 6px">No exercises to log yet</h2>
       <p class="muted" style="margin:0 0 12px">Give an exercise a unit (reps, miles, minutes…) in the Exercise tab and it will show up here with one-tap +5 / +10 / +20 buttons.</p>
       <button type="button" class="btn primary" id="logGoEx">Open Exercise tab</button>
     </div>
@@ -649,12 +659,15 @@ function normalize(d){
   if(d.logs&&typeof d.logs==='object'){out.logs={};for(const ds in d.logs){if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)||!d.logs[ds]||typeof d.logs[ds]!=='object')continue;const day={};
     for(const id in d.logs[ds]){const l=Array.isArray(d.logs[ds][id])?d.logs[ds][id].filter(e=>e&&Number.isFinite(Number(e.a))&&Number(e.a)>0).map(e=>({t:Number(e.t)||0,a:Number(e.a),...(e.set?{set:true}:{})})):[];if(l.length)day[id]=l;}
     if(Object.keys(day).length)out.logs[ds]=day;}}
+  const cleanEntries=a=>Array.isArray(a)?a.filter(e=>e&&Number.isFinite(Number(e.a))&&Number(e.a)>0).map(e=>({t:Number(e.t)||0,a:Number(e.a),...(e.set?{set:true}:{})})):[];
+  if(d.water&&typeof d.water==='object'){out.water={};for(const ds in d.water){if(!/^\d{4}-\d{2}-\d{2}$/.test(ds))continue;const l=cleanEntries(d.water[ds]);if(l.length)out.water[ds]=l;}}
+  if(Number(d.waterGoal)>0)out.waterGoal=Math.min(1000,Math.round(Number(d.waterGoal)*100)/100);
   out.todos=Array.isArray(d.todos)?d.todos.filter(t=>t&&typeof t==='object'&&t.title!==undefined).map(t=>({id:t.id||uid(),title:String(t.title),note:t.note?String(t.note):'',created:isD(t.created)?t.created:ymd(new Date()),completed:isD(t.completed)?t.completed:null})):[];
   out.notes=Array.isArray(d.notes)?d.notes.filter(n=>n&&typeof n==='object').map(n=>({id:n.id||uid(),title:n.title?String(n.title):'',body:n.body?String(n.body):'',updated:Number(n.updated)||Date.now()})):[];
   out.dayNotes={};if(d.dayNotes&&typeof d.dayNotes==='object')for(const k in d.dayNotes){if(/^\d{4}-\d{2}-\d{2}$/.test(k)&&typeof d.dayNotes[k]==='string'&&d.dayNotes[k])out.dayNotes[k]=d.dayNotes[k];}
   out.tasks=d.tasks&&typeof d.tasks==='object'?d.tasks:{};
   out.done=d.done&&typeof d.done==='object'?d.done:{};
-  return out;
+  const ord={};Object.keys(d).forEach(k=>{if(k in out)ord[k]=out[k];});Object.keys(out).forEach(k=>{if(!(k in ord))ord[k]=out[k];});return ord; // keep the stored key order
 }
 let S;
 try{const raw=localStorage.getItem(KEY);S=raw?normalize(JSON.parse(raw)):seed();}catch(e){S=seed();}
@@ -1096,6 +1109,7 @@ function counts(d){const c={plan:0,chores:0,exercises:0,todos:d.todos.length,not
   d.chores.forEach(x=>{c.chores++;if(!ex(x.title))real++;});d.exercises.forEach(x=>{c.exercises++;if(!ex(x.title))real++;});
   Object.values(d.tasks).forEach(l=>c.tasks+=(l||[]).length);Object.values(d.done).forEach(m=>Object.values(m||{}).forEach(v=>{if(v===true)c.checks++;}));
   c.logs=0;Object.values(d.logs||{}).forEach(day=>Object.values(day).forEach(l=>c.logs+=l.length));
+  Object.values(d.water||{}).forEach(l=>c.logs+=(l||[]).length);
   c.real=real+c.todos+c.notes+c.tasks+c.checks+c.dayNotes+c.logs;return c;}
 const meaningful=d=>!!d&&counts(d).real>0; // example-only data counts as empty
 function sameData(a,b){const f=x=>JSON.stringify({...x,lastModified:0});return f(a)===f(b);}
@@ -1234,12 +1248,19 @@ const customUnit=new Set();
 function parseAmt(v){const n=parseFloat(String(v).replace(',','.').replace(/[^0-9.]/g,''));return Number.isFinite(n)&&n>0?Math.round(n*100)/100:0;}
 function fmtAmt(n){return Number.isInteger(n)?String(n):String(Math.round(n*100)/100);}
 function presetsFor(u){u=(u||'').toLowerCase();if(u==='miles'||u==='km')return [0.5,1,2];if(u==='steps')return [500,1000,2000];if(u==='minutes')return [5,10,20];if(u==='laps'||u==='sets')return [1,2,5];return [5,10,20];}
-function dayLog(id,ds){const d=S.logs&&S.logs[ds];return d&&d[id]||[];}
+const WID='__water',WATER_PRESETS=[16,22,32];
+function waterGoal(){return Number(S.waterGoal)>0?Number(S.waterGoal):100;}
+function waterEx(){return {id:WID,title:'Water',unit:'oz',target:waterGoal(),days:[],water:true};}
+function findEx(id){return id===WID?waterEx():S.exercises.find(x=>x.id===id);}
+function dayLog(id,ds){if(id===WID)return (S.water&&S.water[ds])||[];const d=S.logs&&S.logs[ds];return d&&d[id]||[];}
 function dayTotal(id,ds){return Math.round(dayLog(id,ds).reduce((a,e)=>a+e.a,0)*100)/100;}
 const isScheduled=(ex,ds)=>ex.days.includes(parseYmd(ds).getDay());
 function totalHtml(ex,ds){const t=dayTotal(ex.id,ds),met=ex.target&&t>=ex.target;
   return `<span class="ql-total ${met?'met':''}" data-total="${t}">${fmtAmt(t)}${ex.target?' / '+fmtAmt(ex.target):''} ${esc(ex.unit)}${met?' ✓':''}</span>`;}
-function writeLog(ex,ds,list,msg){const prev=dayTotal(ex.id,ds);S.logs=S.logs||{};S.logs[ds]=S.logs[ds]||{};
+function writeLog(ex,ds,list,msg){const prev=dayTotal(ex.id,ds);
+  if(ex.id===WID){S.water=S.water||{};if(list.length)S.water[ds]=list;else delete S.water[ds];
+    const now=dayTotal(WID,ds);save();render();toast(prev<ex.target&&now>=ex.target?`💧 Water goal reached — ${fmtAmt(now)} oz`:msg);return;}
+  S.logs=S.logs||{};S.logs[ds]=S.logs[ds]||{};
   if(list.length)S.logs[ds][ex.id]=list;else delete S.logs[ds][ex.id];if(!Object.keys(S.logs[ds]).length)delete S.logs[ds];
   const now=dayTotal(ex.id,ds);let checked=false;
   if(ex.target&&prev<ex.target&&now>=ex.target&&isScheduled(ex,ds)){(S.done[ds]=S.done[ds]||{})['exercise:'+ex.id]=true;checked=true;}
@@ -1249,20 +1270,22 @@ function addLog(ex,amt){if(cur>ymd(new Date())){toast('You can’t log amounts f
 const UNIT_SHORT={miles:'mi',minutes:'min'};
 function renderLogSummary(){const el=$('#logSum'),d=parseYmd(cur),diff=Math.round((d-parseYmd(ymd(new Date())))/864e5);
   const when=diff===0?'today':diff===-1?'yesterday':diff===1?'tomorrow':DAY_NAMES[d.getDay()];
-  const items=S.exercises.map(ex=>({ex,t:dayTotal(ex.id,cur)})).filter(o=>o.t>0);
+  const items=[waterEx(),...S.exercises].map(ex=>({ex,t:dayTotal(ex.id,cur)})).filter(o=>o.t>0);
   el.classList.toggle('empty',!items.length);
-  if(!items.length){el.innerHTML=`<span class="ls-title">Nothing logged ${when==='today'?'yet':when==='tomorrow'?'yet':'on '+when}</span>${S.exercises.some(x=>x.unit)?'<span class="muted small">·</span><button type="button" class="ls-link" data-open-log>Open Log</button>':''}`;return;}
+  if(!items.length){el.innerHTML=`<span class="ls-title">Nothing logged ${when==='today'?'yet':when==='tomorrow'?'yet':'on '+when}</span><span class="muted small">·</span><button type="button" class="ls-link" data-open-log>Open Log</button>`;return;}
   el.innerHTML=`<span class="ls-title">Logged ${when}</span>`+items.map(({ex,t})=>{const met=ex.target&&t>=ex.target,u=ex.unit?(UNIT_SHORT[ex.unit]||ex.unit):'';
-    return `<button type="button" class="lpill${met?' met':''}" data-logex="${ex.id}" aria-label="${esc(ex.title)}: ${fmtAmt(t)}${ex.target?' of '+fmtAmt(ex.target):''} ${esc(ex.unit||'')}${met?', target reached':''}. Open in Log" data-total="${t}"><i aria-hidden="true"></i><span class="ln">${esc(ex.title)}</span><b>${fmtAmt(t)}${ex.target?' / '+fmtAmt(ex.target):''}</b>${u?`<span class="lu">${esc(u)}</span>`:''}${met?'<span aria-hidden="true" style="color:var(--ok)">✓</span>':''}</button>`;}).join('');}
-$('#logSum').addEventListener('click',e=>{const p=e.target.closest('[data-logex]');if(p){showView('log');const box=$('#qlogList').querySelector(`[data-ex="${p.dataset.logex}"]`);if(box){box.scrollIntoView({block:'center'});const f=box.querySelector('.log-in,[data-ql]');f&&f.focus({preventScroll:true});}return;}
+    return `<button type="button" class="lpill${met?' met':''}${ex.water?' wpill':''}" data-logex="${ex.id}" aria-label="${esc(ex.title)}: ${fmtAmt(t)}${ex.target?' of '+fmtAmt(ex.target):''} ${esc(ex.unit||'')}${met?', target reached':''}. Open in Log" data-total="${t}"><i aria-hidden="true"></i><span class="ln">${esc(ex.title)}</span><b>${fmtAmt(t)}${ex.target?' / '+fmtAmt(ex.target):''}</b>${u?`<span class="lu">${esc(u)}</span>`:''}${met?'<span aria-hidden="true" style="color:var(--ok)">✓</span>':''}</button>`;}).join('');}
+$('#logSum').addEventListener('click',e=>{const p=e.target.closest('[data-logex]');if(p){showView('log');const box=$('#view-log').querySelector(`[data-ex="${p.dataset.logex}"]`);if(box){box.scrollIntoView({block:'center'});const f=box.querySelector('.log-in,[data-ql]');f&&f.focus({preventScroll:true});}return;}
   if(e.target.closest('[data-open-log]'))showView('log');});
 function renderQuickLog(){const list=S.exercises.filter(x=>x.unit);
   const d=parseYmd(cur),diff=Math.round((d-parseYmd(ymd(new Date())))/864e5);
   $('#logTitle').textContent=diff===0?'Today':diff===1?'Tomorrow':diff===-1?'Yesterday':DAY_NAMES[d.getDay()];
   $('#logSub').textContent=d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});$('#logToday').disabled=diff===0;
-  $('#qlogCard').hidden=!list.length;$('#logEmpty').hidden=!!list.length;$('#qlogHint').hidden=!list.length;if(!list.length){$('#qlogList').innerHTML='';return;}
-  const future=cur>ymd(new Date());$('#qlogHint').textContent=future?'Future day — logging opens on the day':'Add amounts any time — even on days an exercise isn’t scheduled';
-  const act=document.activeElement,keep=act&&act.closest&&act.closest('#qlogList [data-ex]')?[act.closest('[data-ex]').dataset.ex,act.matches('.log-in')?'.log-in':act.dataset.add?`[data-add="${act.dataset.add}"]`:null]:null;
+  const future=cur>ymd(new Date());
+  const act=document.activeElement,keep=act&&act.closest&&act.closest('#view-log [data-ex]')?[act.closest('[data-ex]').dataset.ex,act.matches('.log-in')?'.log-in':act.dataset.add?`[data-add="${act.dataset.add}"]`:null]:null;
+  renderWater(future);
+  $('#qlogCard').hidden=!list.length;$('#logEmpty').hidden=!!list.length;$('#qlogHint').hidden=!list.length;
+  $('#qlogHint').textContent=future?'Future day — logging opens on the day':'Add amounts any time — even on days an exercise isn’t scheduled';
   $('#qlogList').innerHTML=list.map(ex=>{const l=dayLog(ex.id,cur);return `<div class="ql-ex" data-ex="${ex.id}">
     <div class="ql-head"><span class="ql-name">${esc(ex.title)}</span>${totalHtml(ex,cur)}${isScheduled(ex,cur)?'':'<span class="ql-sub">not scheduled this day · counts in Stats only</span>'}
       ${l.length?`<button type="button" class="btn small" data-ql="edit" style="margin-left:auto">Edit total</button>`:''}</div>
@@ -1270,14 +1293,25 @@ function renderQuickLog(){const list=S.exercises.filter(x=>x.unit);
       <input class="log-in" type="text" inputmode="decimal" placeholder="+N" aria-label="Custom amount of ${esc(ex.unit)} for ${esc(ex.title)}"><button type="button" class="btn primary" data-ql="add">Add</button></div>`}
     ${l.length?`<div class="ql-entries" aria-label="Entries">${l.map((e,k)=>`<span class="entry">${e.t?new Date(e.t).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}):''} ${e.set?'=':'+'}${fmtAmt(e.a)}<button type="button" class="icon-btn" data-del-entry="${k}" aria-label="Remove entry ${e.set?'':'+'}${fmtAmt(e.a)}">✕</button></span>`).join('')}</div>`:''}
   </div>`;}).join('');
-  if(keep&&keep[1]){const el=$('#qlogList').querySelector(`[data-ex="${keep[0]}"] ${keep[1]}`);el&&el.focus();}}
-const logClick=e=>{const box=e.target.closest('[data-ex]');if(!box)return;const ex=S.exercises.find(x=>x.id===box.dataset.ex);if(!ex)return;
+  if(keep&&keep[1]){const el=$('#view-log').querySelector(`[data-ex="${keep[0]}"] ${keep[1]}`);el&&el.focus();}}
+const entryChips=l=>l.length?`<div class="ql-entries" aria-label="Entries">${l.map((e,k)=>`<span class="entry">${e.t?new Date(e.t).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}):''} ${e.set?'=':'+'}${fmtAmt(e.a)}<button type="button" class="icon-btn" data-del-entry="${k}" aria-label="Remove entry ${e.set?'':'+'}${fmtAmt(e.a)}">✕</button></span>`).join('')}</div>`:'';
+function renderWater(future){const g=waterGoal(),l=dayLog(WID,cur),t=dayTotal(WID,cur),pct=Math.min(100,Math.round(t/g*100)),met=t>=g;
+  $('#waterCard').innerHTML=`<div class="water-box" data-ex="${WID}">
+    <div class="ql-head"><h2 class="w-title"><span aria-hidden="true">💧</span> Water</h2><span class="ql-total w-total${met?' met':''}" data-total="${t}">${fmtAmt(t)} / ${fmtAmt(g)} oz${met?' ✓':''}</span>
+      <span class="w-actions">${l.length?'<button type="button" class="btn small" data-ql="edit">Edit total</button>':''}<button type="button" class="btn small" data-water-goal aria-label="Change daily water goal (now ${fmtAmt(g)} oz)">Goal ${fmtAmt(g)} oz ✎</button></span></div>
+    <div class="bar w-bar${met?' met':''}" role="progressbar" aria-label="Water toward daily goal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-valuetext="${fmtAmt(t)} of ${fmtAmt(g)} oz"><div style="width:${pct}%"></div></div>
+    <div class="w-left muted small">${met?'Goal reached — nice!':`${fmtAmt(Math.round((g-t)*100)/100)} oz to go`}</div>
+    ${future?'<p class="muted small" style="margin:6px 0 0">Future day — logging opens on the day</p>':`<div class="ql-btns">${WATER_PRESETS.map(n=>`<button type="button" class="btn preset wpreset" data-add="${n}" aria-label="Add ${n} oz of water">+${n} oz</button>`).join('')}
+      <input class="log-in" type="text" inputmode="decimal" placeholder="+N oz" aria-label="Custom amount of water in oz"><button type="button" class="btn primary" data-ql="add">Add</button></div>`}
+    ${entryChips(l)}</div>`;}
+const logClick=e=>{const box=e.target.closest('[data-ex]');if(!box)return;const ex=findEx(box.dataset.ex);if(!ex)return;
+  if(e.target.closest('[data-water-goal]')){const v=prompt('Daily water goal (oz):',fmtAmt(waterGoal()));if(v===null)return;const n=parseAmt(v);if(!n||n>1000){toast('Enter a goal between 1 and 1000 oz');return;}S.waterGoal=n;save();render();toast(`Water goal set to ${fmtAmt(n)} oz`);return;}
   const pre=e.target.closest('[data-add]');if(pre){addLog(ex,parseFloat(pre.dataset.add));return;}
   const del=e.target.closest('[data-del-entry]');if(del){const l=dayLog(ex.id,cur).slice();const [r]=l.splice(+del.dataset.delEntry,1);writeLog(ex,cur,l,`Removed ${fmtAmt(r.a)} ${ex.unit}`);return;}
   const b=e.target.closest('[data-ql]');if(!b)return;
   if(b.dataset.ql==='add'){const inp=box.querySelector('.log-in');const n=parseAmt(inp.value);if(!n){toast('Enter an amount, e.g. 15');inp.focus();return;}const inRow=!!box.closest('#itemList');addLog(ex,n);
-    const again=(inRow?$('#itemList'):$('#qlogList')).querySelector(`[data-ex="${ex.id}"] .log-in`);again&&again.focus();}
-  if(b.dataset.ql==='edit'){const v=prompt(`Set today’s total for ${ex.title} (${ex.unit}).\nLeave empty to clear all entries.`,fmtAmt(dayTotal(ex.id,cur)));if(v===null)return;
+    const again=(inRow?$('#itemList'):$('#view-log')).querySelector(`[data-ex="${ex.id}"] .log-in`);again&&again.focus();}
+  if(b.dataset.ql==='edit'){const v=prompt(`Set the total for ${ex.title} (${ex.unit}).\nLeave empty to clear all entries.`,fmtAmt(dayTotal(ex.id,cur)));if(v===null)return;
     const n=parseAmt(v);writeLog(ex,cur,n?[{t:Date.now(),a:n,set:true}]:[],n?`Total set to ${fmtAmt(n)} ${ex.unit}`:'Entries cleared');}};
 const logKey=e=>{if(e.key==='Enter'&&e.target.matches('.log-in')){e.preventDefault();const box=e.target.closest('[data-ex]');box.querySelector('[data-ql="add"]').click();}};
 ['#view-today','#view-log'].forEach(v=>{$(v).addEventListener('click',logClick);$(v).addEventListener('keydown',logKey);});
@@ -1287,7 +1321,7 @@ $('#logGoEx').onclick=()=>showView('exercise');
 // ---------- STATS ----------
 let statsPeriod='week',chartDays=7;
 function mondayOf(ds){const d=parseYmd(ds);return shiftYmd(ds,-((d.getDay()+6)%7));}
-function logDates(id){return Object.keys(S.logs||{}).filter(ds=>S.logs[ds][id]).sort();}
+function logDates(id){if(id===WID)return Object.keys(S.water||{}).filter(ds=>S.water[ds].length).sort();return Object.keys(S.logs||{}).filter(ds=>S.logs[ds][id]).sort();}
 function sumRange(id,a,b){let t=0;logDates(id).forEach(ds=>{if(ds>=a&&ds<=b)t+=dayTotal(id,ds);});return Math.round(t*100)/100;}
 function logStreak(ex,today){ // consecutive scheduled days with an amount (unscheduled days skipped; no schedule = every day); today pending never breaks
   const dates=logDates(ex.id);if(!dates.length)return 0;const sched=ex.days.length?ex.days:[0,1,2,3,4,5,6];let n=0;
@@ -1304,21 +1338,32 @@ function chartSvg(ex,today){const N=chartDays,W=700,H=200,L=44,B=26,T=12,pw=W-L-
   const bars=days.map((d,k)=>{const h=d.v/max*ph,x=L+k*slot+(slot-bw)/2;return `<rect class="${d.v>0?'cbar':'cbar0'}" x="${x.toFixed(1)}" y="${(d.v>0?y(d.v):T+ph-2).toFixed(1)}" width="${bw.toFixed(1)}" height="${(d.v>0?h:2).toFixed(1)}" rx="3" data-date="${d.ds}" data-v="${d.v}"><title>${d.ds}: ${fmtAmt(d.v)} ${esc(ex.unit)}</title></rect>`;}).join('');
   const labels=days.map((d,k)=>{const dt=parseYmd(d.ds),show=N<=7||dt.getDate()===1||k===N-1||(N-1-k)%5===0;if(!show)return '';
     return `<text x="${(L+k*slot+slot/2).toFixed(1)}" y="${H-7}" text-anchor="middle" class="${d.ds===today?'today':''}">${N<=7?SHORT[dt.getDay()]:dt.getDate()}</text>`;}).join('');
-  const tgt=ex.target?`<line class="tgt" x1="${L}" x2="${W-8}" y1="${y(ex.target).toFixed(1)}" y2="${y(ex.target).toFixed(1)}"/><text class="tl" x="${W-10}" y="${(y(ex.target)-5).toFixed(1)}" text-anchor="end">target ${fmtAmt(ex.target)}</text>`:'';
+  const tgt=ex.target?`<line class="tgt" x1="${L}" x2="${W-8}" y1="${y(ex.target).toFixed(1)}" y2="${y(ex.target).toFixed(1)}"/><text class="tl" x="${W-10}" y="${(y(ex.target)-5).toFixed(1)}" text-anchor="end">${ex.water?'goal':'target'} ${fmtAmt(ex.target)}</text>`:'';
   const aria=`${ex.title}, last ${N} days in ${ex.unit}: `+days.filter(d=>d.v>0).map(d=>`${d.ds.slice(5)} ${fmtAmt(d.v)}`).join(', ')+(days.some(d=>d.v>0)?'':'nothing logged');
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(aria)}" data-max="${max}" data-ph="${ph}">
     <line class="axis" x1="${L}" x2="${W-8}" y1="${T+ph}" y2="${T+ph}"/><line class="axis" x1="${L}" x2="${W-8}" y1="${T}" y2="${T}" stroke-dasharray="2 4"/>
     <text x="${L-6}" y="${T+4}" text-anchor="end">${fmtAmt(max)}</text><text x="${L-6}" y="${T+ph+4}" text-anchor="end">0</text>${bars}${tgt}${labels}</svg>`;}
+function waterStats(today){const g=waterGoal(),from={week:mondayOf(today),month:today.slice(0,8)+'01',all:'0000-00-00'}[statsPeriod];
+  const inP=logDates(WID).filter(ds=>ds>=from&&ds<=today),hit=inP.filter(ds=>dayTotal(WID,ds)>=g).length;
+  let span=0;for(let ds=from==='0000-00-00'?(logDates(WID)[0]||today):from;ds<=today;ds=shiftYmd(ds,1))span++;
+  let streak=0;for(let ds=today;;ds=shiftYmd(ds,-1)){if(dayTotal(WID,ds)>=g)streak++;else if(ds!==today)break;if(streak>3660)break;}
+  return {...exStats(waterEx(),today),hit,span,streak};}
+function waterStatsHtml(today){const s=waterStats(today),g=waterGoal(),pl={week:'this week',month:'this month',all:'all time'}[statsPeriod],tile=(v,l,hl)=>`<div class="tile ${hl?'hl':''}"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  if(!logDates(WID).length)return `<div class="st-ex st-water" data-ex="${WID}"><h3><span aria-hidden="true">💧</span> Water <span class="muted small">oz · goal ${fmtAmt(g)}/day</span></h3><p class="muted small" style="margin:0">No water logged yet — use the Water card in the <b>Log</b> tab.</p></div>`;
+  return `<div class="st-ex st-water" data-ex="${WID}"><h3><span aria-hidden="true">💧</span> Water <span class="muted small">oz · goal ${fmtAmt(g)}/day</span></h3>
+    <div class="st-grid">${tile(fmtAmt(s.today),'Today')}${tile(fmtAmt(s.week),'This week',statsPeriod==='week')}${tile(fmtAmt(s.month),'This month',statsPeriod==='month')}${tile(fmtAmt(s.all),'All time',statsPeriod==='all')}</div>
+    <div class="st-grid b">${tile(s.days?fmtAmt(s.avg):'—',`Avg per logged day (${pl})`)}${tile(`${s.hit}<span class="muted small"> / ${s.span}</span>`,`Days goal hit (${pl})`)}${tile((s.streak>=1?'🔥 ':'')+s.streak,'Goal streak (days)')}</div>
+    ${chartSvg(waterEx(),today)}</div>`;}
 function renderStats(){const today=ymd(new Date()),list=S.exercises.filter(x=>x.unit);
   document.querySelectorAll('#statsPeriod button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p===statsPeriod));
   document.querySelectorAll('#chartRange button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.n===chartDays));
   const pl={week:'this week',month:'this month',all:'all time'}[statsPeriod];
-  $('#statsList').innerHTML=list.length?list.map(ex=>{const s=exStats(ex,today),u=esc(ex.unit),tile=(v,l,hl)=>`<div class="tile ${hl?'hl':''}"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  $('#statsList').innerHTML=waterStatsHtml(today)+(list.length?list.map(ex=>{const s=exStats(ex,today),u=esc(ex.unit),tile=(v,l,hl)=>`<div class="tile ${hl?'hl':''}"><div class="v">${v}</div><div class="l">${l}</div></div>`;
     return `<div class="st-ex" data-ex="${ex.id}"><h3>${esc(ex.title)} <span class="muted small">${u}${ex.target?` · target ${fmtAmt(ex.target)}/day`:''}</span></h3>
       <div class="st-grid">${tile(fmtAmt(s.today),'Today')}${tile(fmtAmt(s.week),'This week',statsPeriod==='week')}${tile(fmtAmt(s.month),'This month',statsPeriod==='month')}${tile(fmtAmt(s.all),'All time',statsPeriod==='all')}</div>
       <div class="st-grid b">${tile(s.days?fmtAmt(s.avg):'—',`Avg per logged day (${pl})`)}${tile(s.best?fmtAmt(s.best.v):'—',s.best?`Best day ${pl} · ${parseYmd(s.best.ds).toLocaleDateString(undefined,{month:'short',day:'numeric'})}`:`Best day (${pl})`)}${tile((s.streak>=1?'🔥 ':'')+s.streak,'Logging streak')}</div>
       ${chartSvg(ex,today)}</div>`;}).join('')
-    :`<div class="empty"><b>Nothing to chart yet.</b><br>In the <b>Exercise</b> tab, give an exercise a unit (like reps or miles) and an optional daily target. Then log amounts from <b>Today</b> — use the Quick log buttons any time you do extra reps.</div>`;
+    :`<div class="empty"><b>Nothing to chart yet.</b><br>In the <b>Exercise</b> tab, give an exercise a unit (like reps or miles) and an optional daily target. Then log amounts from <b>Today</b> — use the Log tab any time you do extra reps.</div>`);
   renderHabits(today);}
 function renderHabits(today){const start=dataStart(today),rows=[];
   for(let w=3;w>=0;w--){const mon=shiftYmd(mondayOf(today),-7*w),sun=shiftYmd(mon,6);let n=0,k=0;
