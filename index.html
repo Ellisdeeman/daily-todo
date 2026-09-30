@@ -59,6 +59,7 @@ h2{font-size:1.2rem;margin:0 0 12px;letter-spacing:-.01em}
 
 /* ===== Buttons ===== */
 .btn{border:1px solid var(--line);background:var(--row);padding:0 20px;border-radius:14px;cursor:pointer;min-height:var(--tap);font-weight:650;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn{text-decoration:none;color:inherit}
 .btn:hover:not(:disabled){background:var(--row-hover)}
 .btn:disabled{opacity:.45;cursor:default}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -72,7 +73,7 @@ h2{font-size:1.2rem;margin:0 0 12px;letter-spacing:-.01em}
 .icon-btn[data-a="del"]:hover:not(:disabled),.del-task:hover{color:var(--danger)}
 
 /* ===== Fields ===== */
-input[type=text],input[type=time],textarea,select{min-width:0;border:1px solid var(--line);background:var(--field);border-radius:14px;padding:12px 14px;min-height:var(--tap);width:100%}
+input[type=text],input[type=password],input[type=time],textarea,select{min-width:0;border:1px solid var(--line);background:var(--field);border-radius:14px;padding:12px 14px;min-height:var(--tap);width:100%}
 input::placeholder,textarea::placeholder{color:var(--faint);opacity:1}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent-line);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
 textarea{resize:none;overflow:hidden;line-height:1.5;min-height:96px;display:block}
@@ -221,6 +222,30 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 .cal-sum b{color:var(--text)}
 @media (max-width:560px){.cal-grid{gap:4px}.cal-day{min-height:50px;border-radius:10px}.cal-day .pct{font-size:.58rem}.dayhead{flex-wrap:wrap}.daynav{margin-left:auto}}
 
+/* ===== Sync ===== */
+.sync-ind{display:none;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:99px;min-height:40px;padding:0 12px;cursor:pointer;font-weight:650;font-size:.8rem}
+.sync-ind:not([hidden]){display:inline-flex}
+.sync-glyph{font-size:1rem}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+[data-sync="ok"] .sync-dot{background:var(--ok-fill)}
+[data-sync="saving"] .sync-dot,[data-sync="checking"] .sync-dot,[data-sync="pending"] .sync-dot{background:var(--accent)}
+[data-sync="offline"] .sync-dot,[data-sync="conflict"] .sync-dot{background:var(--todo)}
+[data-sync="error"] .sync-dot{background:var(--danger)}
+[data-sync="error"] #syncStatus{color:var(--danger)}
+.sync-status{display:flex;align-items:center;gap:10px;font-weight:650;margin-bottom:12px;min-height:30px}
+.steps{padding-left:1.3em;margin:0 0 14px;display:grid;gap:8px}
+.steps a,.sync-msg a{color:var(--accent-text);font-weight:650}
+.sync-form input{flex:1;min-width:220px}
+.sync-msg{margin:12px 0 0;padding:12px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--danger) 40%,var(--line));background:color-mix(in srgb,var(--danger) 8%,var(--row));font-weight:600}
+.choice{margin-top:14px;padding:14px;border:2px solid var(--todo);border-radius:var(--rrow);background:color-mix(in srgb,var(--todo) 6%,var(--row))}
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.choice .side{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:.88rem}
+.choice h3,.backups h3{margin:0 0 6px;font-size:.95rem}
+.backups{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.small{font-size:.85rem}
+.bk-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:.88rem}
+@media (max-width:560px){.choice-grid{grid-template-columns:1fr}.sync-ind-text{display:none}.sync-ind{padding:0 10px}}
+
 /* ===== Phone ===== */
 @media (max-width:640px){
   .edit-grid{grid-template-columns:150px 1fr}.edit-grid .note-in{grid-column:1/-1}.edit-grid .acts{grid-column:1/-1;justify-content:flex-end}
@@ -264,6 +289,7 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
         <button role="tab" id="tab-notes" aria-controls="view-notes" aria-selected="false" data-view="notes">Notes</button>
         <button role="tab" id="tab-data" aria-controls="view-data" aria-selected="false" data-view="data">Data</button>
     </nav>
+    <button class="sync-ind" id="syncInd" hidden type="button" aria-label="Sync status" title="Sync status"><span class="sync-glyph" aria-hidden="true">☁</span><span class="sync-dot" aria-hidden="true"></span><span class="sync-ind-text" id="syncIndText"></span></button>
     <button class="icon-btn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">◐</button>
   </header>
 
@@ -418,9 +444,51 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 
   <!-- DATA -->
   <section id="view-data" role="tabpanel" aria-labelledby="tab-data" hidden>
+    <div class="card" id="syncCard">
+      <h2>Sync &amp; cloud backup</h2>
+      <p class="muted" style="margin-top:-6px">Keep your devices in sync and backed up in a secret gist on your own GitHub account.</p>
+      <div id="syncSetup">
+        <ol class="steps">
+          <li><a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Daily%20To-Do%20sync" target="_blank" rel="noopener">Create a GitHub token</a> — a classic token with <b>only the “gist” scope</b> (the link pre-selects it; pick an expiration you’re comfortable with). A fine-grained token also works: <i>Account permissions → Gists → Read and write</i>.</li>
+          <li>Paste it here and tap Connect. The token is stored only in this browser on this device — never in exports, backups or the gist.</li>
+        </ol>
+        <form class="row sync-form" id="syncForm" autocomplete="off">
+          <label class="sr-only" for="syncToken">GitHub token</label>
+          <input type="password" id="syncToken" autocomplete="off" placeholder="ghp_… or github_pat_…" spellcheck="false" autocapitalize="off">
+          <button class="btn primary" type="submit" id="syncConnectBtn">Connect</button>
+        </form>
+      </div>
+      <div id="syncOn" hidden>
+        <div class="sync-status" role="status" aria-live="polite"><span class="sync-dot" aria-hidden="true"></span><span id="syncStatus">Not connected</span></div>
+        <div class="row">
+          <button class="btn" id="syncNowBtn" type="button">Sync now</button>
+          <a class="btn" id="gistLink" target="_blank" rel="noopener" href="#">Open gist ↗</a>
+          <button class="btn" id="syncFixBtn" type="button" hidden>Reconnect</button>
+          <button class="btn danger" id="syncOffBtn" type="button">Disconnect</button>
+        </div>
+      </div>
+      <p class="sync-msg" id="syncMsg" role="alert" hidden></p>
+      <div class="choice" id="syncChoice" hidden>
+        <p id="choiceMsg" style="margin-top:0"></p>
+        <div class="choice-grid">
+          <div class="side"><h3>This device</h3><div id="choiceLocal"></div></div>
+          <div class="side"><h3>Cloud (gist)</h3><div id="choiceRemote"></div></div>
+        </div>
+        <div class="row">
+          <button class="btn" id="choiceCloud" type="button">Use cloud data</button>
+          <button class="btn" id="choiceLocalBtn" type="button">Keep this device’s data &amp; upload</button>
+          <button class="btn" id="choiceCancel" type="button">Cancel</button>
+        </div>
+      </div>
+      <div class="backups">
+        <h3>Local safety backups</h3>
+        <p class="muted small">A copy of this device’s data is saved automatically before anything replaces it (cloud load, import, reset, restore). The last 3 are kept on this device.</p>
+        <div id="backupList"></div>
+      </div>
+    </div>
     <div class="card">
       <h2>Backup &amp; restore</h2>
-      <p class="muted">Your data is stored in this browser only (localStorage). Export a backup file to keep it safe or move it to another device.</p>
+      <p class="muted">Your data is stored in this browser on this device (and in your gist if sync is connected). Export a backup file to keep an extra copy or move it to another device.</p>
       <div class="row">
         <button class="btn primary" id="exportBtn">Export JSON</button>
         <button class="btn" id="importBtn">Import JSON…</button>
@@ -470,6 +538,7 @@ function normalize(d){
   if(!d||typeof d!=='object') throw new Error('Invalid data');
   const out=blank();
   out.hintDismissed=!!d.hintDismissed;
+  if(Number(d.lastModified)>0)out.lastModified=Number(d.lastModified);
   out.theme=['auto','light','dark'].includes(d.theme)?d.theme:'auto';
   for(let i=0;i<7;i++) out.plan[i]=Array.isArray(d.plan&&d.plan[i])?d.plan[i].filter(x=>x&&x.title).map(x=>({id:x.id||uid(),time:x.time||'',title:String(x.title),note:x.note?String(x.note):''})):[];
   out.chores=Array.isArray(d.chores)?d.chores.filter(c=>c&&c.title!==undefined).map(c=>({id:c.id||uid(),title:String(c.title),days:Array.isArray(c.days)?c.days.map(Number).filter(n=>n>=0&&n<7):[],time:c.time||'',createdAt:/^\d{4}-\d{2}-\d{2}$/.test(c.createdAt)?c.createdAt:ymd(new Date())})):[];
@@ -484,8 +553,11 @@ function normalize(d){
 }
 let S;
 try{const raw=localStorage.getItem(KEY);S=raw?normalize(JSON.parse(raw)):seed();}catch(e){S=seed();}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('Could not save (storage full or blocked)');}}
-save();
+// save(touch): touch=true marks a user change (updates lastModified and schedules cloud sync)
+function save(touch=true){if(touch){S.lastModified=Date.now();}
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('Could not save (storage full or blocked)');}
+  if(touch&&typeof onLocalChange==='function')onLocalChange();}
+save(false);
 let saveT=null;function saveSoon(cb){clearTimeout(saveT);saveT=setTimeout(()=>{saveT=null;save();cb&&cb();},400);}
 function flushSave(){if(saveT){clearTimeout(saveT);saveT=null;save();}}
 window.addEventListener('beforeunload',flushSave);document.addEventListener('visibilitychange',()=>{if(document.hidden)flushSave();});
@@ -712,10 +784,10 @@ $('#exportBtn').onclick=()=>{flushSave();const blob=new Blob([JSON.stringify(S,n
   a.href=URL.createObjectURL(blob);a.download='daily-todo-backup-'+ymd(new Date())+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Backup exported');};
 $('#importBtn').onclick=()=>$('#importFile').click();
 $('#importFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const d=normalize(JSON.parse(r.result));if(!confirm('Replace all current data with this backup?'))return;S=d;save();applyTheme();render();toast('Backup imported');}
+  r.onload=()=>{try{const d=normalize(JSON.parse(r.result));if(!confirm('Replace all current data with this backup?'))return;backupLocal('before import');S=d;save();applyTheme();render();toast('Backup imported');}
     catch(err){alert('Could not import: '+err.message);}finally{e.target.value='';}};r.readAsText(f);};
-$('#resetBtn').onclick=()=>{if(!confirm('Erase ALL data and restore the example plan? This cannot be undone.'))return;S=seed();save();applyTheme();render();toast('Reset done');};
-$('#wipeBtn').onclick=()=>{if(!confirm('Erase ALL data and start completely blank? This cannot be undone.'))return;S=blank();save();applyTheme();render();toast('All data erased');};
+$('#resetBtn').onclick=()=>{if(!confirm('Erase ALL data and restore the example plan? (A local safety backup is kept.)'))return;backupLocal('before reset');S=seed();save();applyTheme();render();toast('Reset done');};
+$('#wipeBtn').onclick=()=>{if(!confirm('Erase ALL data and start completely blank? (A local safety backup is kept.)'))return;backupLocal('before erase');S=blank();save();applyTheme();render();toast('All data erased');};
 
 // ---------- DAY NOTE ----------
 let dayNoteOpen=false;
@@ -892,6 +964,149 @@ $('#calNext').onclick=()=>{calMonth=new Date(calMonth.getFullYear(),calMonth.get
 $('#calGrid').addEventListener('click',e=>{const b=e.target.closest('[data-date]');if(!b)return;flushSave();cur=b.dataset.date;toggleCal(false);renderToday();
   $('#dayTitle').scrollIntoView({block:'nearest'});$('#calBtn').focus();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#calCard').hidden&&view==='today'){toggleCal(false);$('#calBtn').focus();}});
+
+// ---------- SYNC via secret GitHub Gist ----------
+// Token + sync bookkeeping live under their own key (never in S, exports, backups or the gist).
+const SYNC_KEY='dailyTodo.sync',BK_KEY='dailyTodo.backups',GIST_FILE='daily-todo-data.json',GH='https://api.github.com';
+let SY=(()=>{try{return JSON.parse(localStorage.getItem(SYNC_KEY))||{};}catch(e){return {};}})();
+function saveSync(){try{localStorage.setItem(SYNC_KEY,JSON.stringify(SY));}catch(e){}}
+let syncState='off',pushTimer=null,retryTimer=null,pushing=false,pushAgain=false,choiceCtx=null,lastPull=0;
+const connected=()=>!!(SY.token&&SY.gistId);
+const isDirty=()=>(S.lastModified||0)>(SY.localSyncedAt||0);
+function counts(d){const c={plan:0,chores:0,exercises:0,todos:d.todos.length,notes:d.notes.length,tasks:0,checks:0,dayNotes:Object.keys(d.dayNotes).length},ex=t=>/^Example:/i.test(t);let real=0;
+  for(let i=0;i<7;i++)(d.plan[i]||[]).forEach(p=>{c.plan++;if(!ex(p.title))real++;});
+  d.chores.forEach(x=>{c.chores++;if(!ex(x.title))real++;});d.exercises.forEach(x=>{c.exercises++;if(!ex(x.title))real++;});
+  Object.values(d.tasks).forEach(l=>c.tasks+=(l||[]).length);Object.values(d.done).forEach(m=>Object.values(m||{}).forEach(v=>{if(v===true)c.checks++;}));
+  c.real=real+c.todos+c.notes+c.tasks+c.checks+c.dayNotes;return c;}
+const meaningful=d=>!!d&&counts(d).real>0; // example-only data counts as empty
+function sameData(a,b){const f=x=>JSON.stringify({...x,lastModified:0});return f(a)===f(b);}
+function relTime(ms){if(!ms)return 'never';const s=Math.round((Date.now()-ms)/1000);if(s<45)return 'just now';const m=Math.round(s/60);if(m<60)return m+' min ago';const h=Math.round(m/60);if(h<24)return h+' h ago';
+  return new Date(ms).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
+function fmtStamp(ms){return ms?new Date(ms).toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'unknown';}
+function summary(d,stamp){const c=counts(d);const parts=[[c.plan,'plan item'],[c.chores,'chore'],[c.exercises,'exercise'],[c.todos,'to-do'],[c.notes,'note'],[c.tasks,'one-off task'],[c.checks,'check mark'],[c.dayNotes,'day note']]
+  .map(([n,w])=>`${n} ${w}${n===1?'':'s'}`);return `<div>${parts.join(' · ')}</div><div class="muted" style="margin-top:4px">Last changed: <b>${esc(fmtStamp(stamp))}</b>${meaningful(d)?'':' · <b>no real data</b>'}</div>`;}
+
+// ---- local safety backups (separate key, last 3) ----
+function getBackups(){try{return JSON.parse(localStorage.getItem(BK_KEY))||[];}catch(e){return [];}}
+function backupLocal(reason){let l=getBackups();if(l[0]&&sameData(l[0].data,S)){l[0].at=Date.now();}else l.unshift({at:Date.now(),reason,data:JSON.parse(JSON.stringify(S))});
+  l=l.slice(0,3);for(let n=l.length;n>0;n--){try{localStorage.setItem(BK_KEY,JSON.stringify(l.slice(0,n)));break;}catch(e){}}renderBackups();}
+function renderBackups(){const l=getBackups(),el=$('#backupList');if(!el)return;
+  el.innerHTML=l.length?l.map((b,i)=>`<div class="bk-row"><span><b>${esc(fmtStamp(b.at))}</b> · ${esc(b.reason)}<br><span class="muted">${counts(normalize(b.data)).real} items of real data</span></span><button class="btn small" type="button" data-restore="${i}">${i===0?'Restore previous local backup':'Restore'}</button></div>`).join('')
+    :'<p class="muted small" style="margin:0">No backups yet.</p>';}
+$('#backupList').addEventListener('click',e=>{const b=e.target.closest('[data-restore]');if(!b)return;const l=getBackups(),t=l[+b.dataset.restore];if(!t)return;
+  if(!confirm(`Restore the local backup from ${fmtStamp(t.at)} (${t.reason})?\nYour current data will be backed up first.${connected()?'\nThe restored data will then be uploaded to your gist.':''}`))return;
+  const data=normalize(t.data);backupLocal('before restore');S=data;save();applyTheme();render();renderBackups();toast('Backup restored');});
+
+// ---- GitHub API ----
+class SyncErr extends Error{constructor(kind,msg){super(msg||kind);this.kind=kind;}}
+async function gh(path,opts={}){
+  if(navigator.onLine===false)throw new SyncErr('offline');
+  let r;try{r=await fetch(GH+path,{method:opts.method||'GET',cache:'no-store',body:opts.body,
+    headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+SY.token,...(opts.body?{'Content-Type':'application/json'}:{})}});}
+  catch(e){throw new SyncErr('offline');}
+  if(r.status===401)throw new SyncErr('auth','GitHub rejected the token (wrong, expired or revoked).');
+  if(r.status===403||r.status===429){const t=await r.text().catch(()=>'');throw new SyncErr(/rate limit/i.test(t)?'rate':'forbidden',/rate limit/i.test(t)?'GitHub rate limit reached — will retry later.':'GitHub refused access — the token needs the “gist” permission.');}
+  if(r.status===404)throw new SyncErr('notfound','The sync gist no longer exists or this token can’t see it.');
+  if(!r.ok)throw new SyncErr('http','GitHub error '+r.status+' — will retry.');
+  return r.json();}
+async function findGist(){for(let page=1;page<=10;page++){const l=await gh(`/gists?per_page=100&page=${page}`);const hit=l.find(g=>g.files&&g.files[GIST_FILE]);if(hit)return hit.id;if(l.length<100)break;}return null;}
+async function fetchGist(id){const g=await gh('/gists/'+id);const f=g.files&&g.files[GIST_FILE];if(!f)throw new SyncErr('notfound');
+  let text=f.content;if(f.truncated&&f.raw_url){try{text=await (await fetch(f.raw_url,{cache:'no-store'})).text();}catch(e){throw new SyncErr('offline');}}
+  let data=null;try{data=normalize(JSON.parse(text));}catch(e){data=null;}
+  return {data,updated:g.updated_at,url:g.html_url};}
+const gistBody=()=>JSON.stringify({files:{[GIST_FILE]:{content:JSON.stringify(S,null,1)}}});
+function markSynced(updated,localMod){SY.remoteUpdatedAt=updated;SY.localSyncedAt=localMod===undefined?(S.lastModified||0):localMod;SY.lastSyncAt=Date.now();saveSync();}
+
+// ---- UI state ----
+function setSync(state,msg){syncState=state;const on=!!SY.token;
+  $('#syncSetup').hidden=on;$('#syncOn').hidden=!on;$('#syncInd').hidden=!on;$('#syncNowBtn').hidden=!connected();
+  document.body.dataset.sync=state;
+  const txt={off:'Not connected',ok:'Synced '+relTime(SY.lastSyncAt),pending:'Changes waiting to save…',saving:'Saving…',checking:'Checking cloud…',
+    offline:'Offline — will retry',conflict:'Sync paused — choose which data to keep',error:'Sync error'}[state]||state;
+  $('#syncStatus').textContent=txt;$('#syncIndText').textContent={ok:'Synced',saving:'Saving…',pending:'Saving…',checking:'Syncing…',offline:'Offline',conflict:'Choose',error:'Error'}[state]||'';
+  $('#syncInd').title='Sync: '+txt;$('#syncInd').setAttribute('aria-label','Sync status: '+txt+'. Open Data tab.');
+  const m=$('#syncMsg');m.hidden=!msg;m.textContent=msg||'';
+  $('#syncFixBtn').hidden=state!=='error';$('#syncNowBtn').disabled=state==='saving'||state==='checking';
+  if(SY.gistUrl)$('#gistLink').href=SY.gistUrl;$('#gistLink').hidden=!SY.gistUrl;}
+setInterval(()=>{if(syncState==='ok')setSync('ok');},30000);
+function handleErr(e){clearTimeout(retryTimer);
+  const k=e&&e.kind||'http';
+  if(k==='offline'){setSync('offline');retryTimer=setTimeout(()=>pullCheck(true),30000);return;}
+  if(k==='auth'){SY.authFailed=true;saveSync();setSync('error','GitHub rejected the token (wrong, expired or revoked). Tap Reconnect and paste a new token.');return;}
+  if(k==='notfound'){SY.gistId=null;saveSync();setSync('error','The sync gist was deleted or this token can’t see it. Tap Reconnect to set up sync again (your local data is kept).');return;}
+  setSync('error',e.message||'Sync error');retryTimer=setTimeout(()=>pullCheck(true),k==='rate'?300000:60000);}
+
+// ---- choice panel (connect with existing data / conflict / empty upload) ----
+function showChoice(mode,R,updated){choiceCtx={mode,R,updated};clearTimeout(pushTimer);
+  $('#choiceMsg').innerHTML={connect:'<b>Your gist already has Daily To-Do data.</b> Which data should this device use?',
+    conflict:'<b>Both this device and the cloud changed since the last sync.</b> Pick which version to keep. If you pick the cloud version, this device’s current data is saved as a local safety backup first.',
+    empty:'<b>This device has no real data, but the cloud does.</b> Uploading would replace the cloud data with an empty plan.'}[mode];
+  $('#choiceLocal').innerHTML=summary(S,S.lastModified);$('#choiceRemote').innerHTML=summary(R,R.lastModified||Date.parse(updated));
+  $('#choiceLocalBtn').textContent=mode==='empty'?'Upload empty data anyway':'Keep this device’s data & upload';
+  $('#choiceCancel').textContent=mode==='connect'?'Cancel (don’t connect)':'Decide later';
+  $('#syncChoice').hidden=false;setSync('conflict');
+  if(view!=='data')toast(mode==='connect'?'Choose which data to keep (Data tab)':'Sync needs your choice — see Data tab');}
+function hideChoice(){choiceCtx=null;$('#syncChoice').hidden=true;}
+$('#choiceCloud').onclick=()=>{const c=choiceCtx;if(!c)return;hideChoice();applyRemote(c.R,c.updated,'Loaded data from the cloud');};
+$('#choiceLocalBtn').onclick=async()=>{const c=choiceCtx;if(!c)return;
+  if(!meaningful(S)&&meaningful(c.R)&&!confirm('This device has no real data. Replace the cloud data with it anyway?\n(The cloud copy will be overwritten.)'))return;
+  hideChoice();await pushNow({force:true});};
+$('#choiceCancel').onclick=()=>{const c=choiceCtx;hideChoice();
+  if(c&&c.mode==='connect'){SY={};saveSync();setSync('off');toast('Not connected');}
+  else setSync('conflict','Sync is paused until you choose. Tap “Sync now” to see the choice again.');};
+function applyRemote(R,updated,msg){backupLocal('before loading cloud data');S=R;save(false);markSynced(updated);applyTheme();render();setSync('ok');toast(msg);}
+
+// ---- connect / push / pull ----
+$('#syncForm').onsubmit=async e=>{e.preventDefault();const t=$('#syncToken').value.trim();if(!t){$('#syncToken').focus();return;}await connectSync(t);};
+async function connectSync(token){hideChoice();clearTimeout(retryTimer);SY={token};saveSync();setSync('checking');
+  try{
+    const id=await findGist();
+    if(!id){const g=await gh('/gists',{method:'POST',body:JSON.stringify({description:'Daily To-Do sync data (created by the Daily To-Do app)',public:false,files:{[GIST_FILE]:{content:JSON.stringify(S,null,1)}}})});
+      SY.gistId=g.id;SY.gistUrl=g.html_url;markSynced(g.updated_at);$('#syncToken').value='';setSync('ok');toast('Connected — created a secret gist');return;}
+    SY.gistId=id;saveSync();const {data:R,updated,url}=await fetchGist(id);SY.gistUrl=url;saveSync();$('#syncToken').value='';
+    if(!R||!meaningful(R)){await pushNow({force:true});toast('Connected — uploaded this device’s data');return;}
+    if(sameData(R,S)){markSynced(updated);setSync('ok');toast('Connected — already in sync');return;}
+    if(!meaningful(S)){applyRemote(R,updated,'Connected — loaded your data from the cloud');return;}
+    setSync('checking');showChoice('connect',R,updated);
+  }catch(err){if(err.kind==='auth'||err.kind==='forbidden'){SY={};saveSync();setSync('off',err.message);}else handleErr(err);}}
+function onLocalChange(){if(!connected()||SY.authFailed||choiceCtx)return;setSync('pending');clearTimeout(pushTimer);pushTimer=setTimeout(()=>pushNow(),3000);}
+async function pushNow({force=false}={}){
+  if(!connected()||SY.authFailed)return;clearTimeout(pushTimer);
+  if(pushing){pushAgain=true;return;}
+  if(!force&&!isDirty()){setSync('ok');return;}
+  pushing=true;setSync('saving');
+  try{
+    if(!force){const {data:R,updated}=await fetchGist(SY.gistId);
+      if(updated!==SY.remoteUpdatedAt&&R&&!sameData(R,S)){showChoice('conflict',R,updated);return;}
+      if(!meaningful(S)&&R&&meaningful(R)){showChoice('empty',R,updated);return;}}
+    const mod=S.lastModified||0;
+    const g=await gh('/gists/'+SY.gistId,{method:'PATCH',body:gistBody()});
+    markSynced(g.updated_at,mod);setSync('ok');
+  }catch(e){handleErr(e);}
+  finally{pushing=false;if(pushAgain||(connected()&&isDirty()&&syncState==='ok')){pushAgain=false;if(isDirty())onLocalChange();}}}
+async function pullCheck(force=false){
+  if(!connected()||SY.authFailed||pushing||choiceCtx)return;
+  if(!force&&Date.now()-lastPull<10000)return;lastPull=Date.now();
+  try{setSync('checking');const {data:R,updated,url}=await fetchGist(SY.gistId);if(url&&SY.gistUrl!==url){SY.gistUrl=url;saveSync();}
+    if(updated===SY.remoteUpdatedAt){if(isDirty())await pushNow();else{SY.lastSyncAt=Date.now();saveSync();setSync('ok');}return;}
+    if(R&&sameData(R,S)){markSynced(updated);setSync('ok');return;}
+    if(!R){setSync('error','The cloud copy isn’t valid Daily To-Do data. Fix or delete the gist, or tap Reconnect.');return;}
+    if(!isDirty()){applyRemote(R,updated,'Updated from the cloud');return;}
+    showChoice('conflict',R,updated);
+  }catch(e){handleErr(e);}}
+$('#syncNowBtn').onclick=()=>{flushSave();if(isDirty())pushNow();else pullCheck(true);};
+$('#syncFixBtn').onclick=()=>{const t=SY.token;if(SY.authFailed||!t){SY={};saveSync();setSync('off');$('#syncToken').focus();}else connectSync(t);};
+$('#syncOffBtn').onclick=()=>{if(!confirm('Disconnect sync on this device?\nYour data stays on this device and in the gist; the token is removed from this browser.'))return;
+  clearTimeout(pushTimer);clearTimeout(retryTimer);hideChoice();SY={};saveSync();setSync('off');toast('Sync disconnected');};
+$('#syncInd').onclick=()=>showView('data');
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(connected()&&(isDirty()||pushTimer)){flushSave();pushNow();}}else pullCheck();});
+window.addEventListener('focus',()=>pullCheck());
+window.addEventListener('online',()=>pullCheck(true));
+window.addEventListener('offline',()=>{if(connected())setSync('offline');});
+renderBackups();
+if(SY.token&&!SY.gistId){setSync('error','Sync setup didn’t finish. Tap Reconnect.');}
+else if(SY.authFailed)setSync('error','GitHub rejected the token (wrong, expired or revoked). Tap Reconnect and paste a new token.');
+else if(connected()){setSync('ok');setTimeout(()=>pullCheck(true),300);}else setSync('off');
 
 function render(){renderHint();if(view==='today')renderToday();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();else if(view==='exercise')renderExercises();else if(view==='notes')renderNotes();else if(view==='todo')renderTodos();}
 // refresh "Today" label if the tab stays open past midnight
