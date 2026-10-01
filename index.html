@@ -254,7 +254,11 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 .ql-total{font-weight:750;font-variant-numeric:tabular-nums}
 .ql-total.met{color:var(--ok)}
 .ql-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-#reorderBtn[aria-pressed=true]{border-color:var(--accent-line);color:var(--accent-text)}
+
+.list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}.list-head h2{margin:0}
+.ro-toggle[aria-pressed=true]{border-color:var(--accent-line);color:var(--accent-text)}
+.ro-list .ql-mv{margin:0 0 8px}.ro-list .ql-mv:first-child{margin-top:4px}
+.ro-todo{box-shadow:inset 5px 0 0 var(--todo)}.ro-plan{box-shadow:inset 5px 0 0 var(--plan)}.ro-chore{box-shadow:inset 5px 0 0 var(--chore)}.ro-note{box-shadow:inset 5px 0 0 var(--faint)}
 .ql-mv .ql-head{margin:0;flex-wrap:nowrap}.ql-mv .ql-name{min-width:0;overflow-wrap:anywhere}
 .mv-btns{margin-left:auto;display:flex;gap:6px;flex:none}.mv-btns .icon-btn{width:var(--tap);height:var(--tap);border:1px solid var(--line);background:var(--card)}
 .water-card{box-shadow:inset 6px 0 0 var(--water),var(--shadow)}
@@ -448,7 +452,7 @@ select{appearance:auto}
     </div>
     <div class="card water-card" id="waterCard"></div>
     <div class="card qlog" id="qlogCard">
-      <div class="ql-top"><h2 style="margin:0">Exercises</h2><button type="button" class="btn small" id="reorderBtn" aria-pressed="false" hidden>↕ Reorder</button></div>
+      <div class="ql-top"><h2 style="margin:0">Exercises</h2><button type="button" class="btn small ro-toggle" id="reorderBtn" data-ro="log" aria-pressed="false" title="Reorder exercises" hidden>↕ Reorder</button></div>
       <div id="qlogList"></div></div>
     <div class="card empty-card" id="logEmpty" hidden>
       <h2 style="margin:0 0 6px">No exercises to log yet</h2>
@@ -459,8 +463,8 @@ select{appearance:auto}
 
   <section id="view-todo" role="tabpanel" aria-labelledby="tab-todo" hidden>
     <div class="card">
-      <h2>To-Do</h2>
-      <p class="muted" style="margin-top:-6px">One-time tasks (like “Get an oil change”). They stay at the top of your Today list every day until you finish them. Use ↑ ↓ to set priority.</p>
+      <div class="list-head"><h2>To-Do</h2><button type="button" class="btn small ro-toggle" data-ro="todo" aria-pressed="false" title="Reorder open to-dos" hidden>↕ Reorder</button></div>
+      <p class="muted" style="margin-top:-6px">One-time tasks (like “Get an oil change”). They stay at the top of your Today list every day until you finish them. Use ↕ Reorder to set priority.</p>
       <form class="todo-add" id="todoAddForm" autocomplete="off">
         <input type="text" id="todoTitle" placeholder="New to-do…" aria-label="New to-do" required>
         <input type="text" id="todoNote" placeholder="Note (optional)" aria-label="Note (optional)">
@@ -478,7 +482,7 @@ select{appearance:auto}
   <!-- PLAN -->
   <section id="view-plan" role="tabpanel" aria-labelledby="tab-plan" hidden>
     <div class="card">
-      <h2>Weekly plan</h2>
+      <div class="list-head"><h2>Weekly plan</h2><button type="button" class="btn small ro-toggle" data-ro="plan" aria-pressed="false" title="Reorder this day’s plan" hidden>↕ Reorder</button></div>
       <p class="muted" style="margin-top:-6px">Your preprogrammed plan for each day of the week. It shows up automatically on that weekday.</p>
       <div class="daytabs" id="planDayTabs" role="group" aria-label="Choose weekday"></div>
       <div class="edit-list" id="planList"></div>
@@ -511,7 +515,7 @@ select{appearance:auto}
   <!-- CHORES -->
   <section id="view-chores" role="tabpanel" aria-labelledby="tab-chores" hidden>
     <div class="card">
-      <h2>Recurring chores</h2>
+      <div class="list-head"><h2>Recurring chores</h2><button type="button" class="btn small ro-toggle" data-ro="chore" aria-pressed="false" title="Reorder chores" hidden>↕ Reorder</button></div>
       <p class="muted" style="margin-top:-6px">Chores appear on the Today view only on the weekdays you pick. A missed chore rolls over to the next days as <b>Overdue</b> until it’s done — everything resets on Monday.</p>
       <div id="choreList"></div>
       <button class="btn primary" id="addChore">+ Add chore</button>
@@ -521,7 +525,7 @@ select{appearance:auto}
   <!-- EXERCISE -->
   <section id="view-exercise" role="tabpanel" aria-labelledby="tab-exercise" hidden>
     <div class="card">
-      <h2>Exercise</h2>
+      <div class="list-head"><h2>Exercise</h2><button type="button" class="btn small ro-toggle" data-ro="exercise" aria-pressed="false" title="Reorder exercises" hidden>↕ Reorder</button></div>
       <p class="muted" style="margin-top:-6px">Workouts appear on the Today view only on the weekdays you pick. Use the note for sets, reps or duration.</p>
       <div id="exerciseList"></div>
       <button class="btn primary" id="addExercise">+ Add exercise</button>
@@ -554,7 +558,7 @@ select{appearance:auto}
     <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:12px">
         <h2 style="margin:0">Notes</h2>
-        <button class="btn primary" id="addNote">+ New note</button>
+        <span class="row" style="gap:8px"><button type="button" class="btn small ro-toggle" data-ro="note" aria-pressed="false" title="Reorder notes" hidden>↕ Reorder</button><button class="btn primary" id="addNote">+ New note</button></span>
       </div>
       <div id="noteList"></div>
     </div>
@@ -705,7 +709,7 @@ applyTheme();
 // ---------- tabs ----------
 let view='today';
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
-function showView(v){flushSave();view=v;document.querySelectorAll('nav.tabs button').forEach(b=>{b.setAttribute('aria-selected',b.dataset.view===v);if(b.dataset.view===v)scrollTabIntoView(b);});
+function showView(v){flushSave();if(v!==view)reorderList=null;view=v;document.querySelectorAll('nav.tabs button').forEach(b=>{b.setAttribute('aria-selected',b.dataset.view===v);if(b.dataset.view===v)scrollTabIntoView(b);});
   ['today','log','todo','plan','chores','exercise','stats','notes','data'].forEach(x=>$('#view-'+x).hidden=x!==v);render();}
 
 // ---------- example hint ----------
@@ -810,19 +814,41 @@ $('#prevDay').onclick=()=>shift(-1);$('#nextDay').onclick=()=>shift(1);$('#today
 document.addEventListener('keydown',e=>{if((view!=='today'&&view!=='log')||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
   if(e.key==='ArrowLeft')shift(-1);else if(e.key==='ArrowRight')shift(1);});
 
+// ---------- REORDER MODE (shared by To-Do, Plan, Chores, Exercise, Notes, Log) ----------
+let reorderList=null;
+const RO={
+  todo:{list:'#todoList',items:()=>S.todos.filter(t=>!t.completed),arr:()=>S.todos},
+  plan:{list:'#planList',items:()=>S.plan[planDay],arr:()=>S.plan[planDay],name:p=>(p.time?fmtTime(p.time)+' · ':'')+p.title},
+  chore:{list:'#choreList',items:()=>S.chores,arr:()=>S.chores},
+  exercise:{list:'#exerciseList',items:()=>S.exercises,arr:()=>S.exercises},
+  note:{list:'#noteList',items:()=>S.notes,arr:()=>S.notes,name:n=>n.title||'Untitled note'},
+  log:{list:'#qlogList',items:()=>S.exercises.filter(x=>x.unit),arr:()=>S.exercises}
+};
+function roSync(key){const n=RO[key].items().length;if(n<2&&reorderList===key)reorderList=null;const on=reorderList===key;
+  document.querySelectorAll(`[data-ro="${key}"]`).forEach(b=>{b.hidden=n<2;b.setAttribute('aria-pressed',on);b.textContent=on?'✓ Done':'↕ Reorder';});return on;}
+function roRows(key){const l=RO[key].items(),nm=RO[key].name||(x=>x.title||'Untitled');
+  return `<div class="ro-list" role="list">`+l.map((x,i)=>`<div class="ql-ex ql-mv ro-${key}" role="listitem" data-mv-id="${x.id}"><div class="ql-head"><span class="ql-name">${esc(nm(x))}</span>
+    <span class="mv-btns"><button type="button" class="icon-btn" data-mv="up" aria-label="Move ${esc(nm(x))} up" title="Move up" ${i===0?'disabled':''}>↑</button><button type="button" class="icon-btn" data-mv="down" aria-label="Move ${esc(nm(x))} down" title="Move down" ${i===l.length-1?'disabled':''}>↓</button></span></div></div>`).join('')+`</div>`;}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-ro]');if(!t)return;const k=t.dataset.ro;flushSave();reorderList=reorderList===k?null:k;render();
+  const b=document.querySelector(`[data-ro="${k}"]`);b&&!b.hidden&&b.focus();});
+Object.keys(RO).forEach(k=>$(RO[k].list).addEventListener('click',e=>{const b=e.target.closest('[data-mv]');if(!b||reorderList!==k)return;
+  const id=b.closest('[data-mv-id]').dataset.mvId,dir=b.dataset.mv,arr=RO[k].arr(),inSet=new Set(RO[k].items()),i=arr.findIndex(x=>x.id===id);if(i<0)return;
+  let j=i;do{j+=dir==='up'?-1:1;}while(j>=0&&j<arr.length&&!inSet.has(arr[j]));if(j<0||j>=arr.length)return;
+  [arr[i],arr[j]]=[arr[j],arr[i]];save();render();
+  const box=$(RO[k].list).querySelector(`[data-mv-id="${id}"]`);if(box){const nb=box.querySelector(`[data-mv="${dir}"]`),fb=box.querySelector(`[data-mv="${dir==='up'?'down':'up'}"]`);((nb&&!nb.disabled)?nb:fb).focus();}
+  toast(`Moved ${(RO[k].name||(x=>x.title||'Untitled'))(arr[j])} ${dir}`);}));
+
 // ---------- PLAN ----------
 let planDay=new Date().getDay();
 let addDays=[planDay];
 function renderPlan(){
   $('#planDayTabs').innerHTML=ORDER.map(d=>`<button type="button" data-d="${d}" aria-pressed="${d===planDay}">${SHORT[d]}<span class="n">${S.plan[d].length} item${S.plan[d].length===1?'':'s'}</span></button>`).join('');
   const list=S.plan[planDay];
-  $('#planList').innerHTML=list.length?list.map((p,i)=>`<div class="edit-grid" data-id="${p.id}">
+  $('#planList').innerHTML=roSync('plan')?roRows('plan')+`<div class="row" style="justify-content:flex-end;padding-top:8px"><button class="btn small" id="sortPlan">Sort by time</button></div>`:list.length?list.map((p,i)=>`<div class="edit-grid" data-id="${p.id}">
       <input type="time" value="${esc(p.time)}" data-f="time" aria-label="Start time">
       <input type="text" value="${esc(p.title)}" data-f="title" aria-label="Title">
       <input type="text" class="note-in" value="${esc(p.note)}" data-f="note" placeholder="Note (optional)" aria-label="Note">
       <div class="acts">
-        <button class="icon-btn" data-a="up" aria-label="Move up" ${i===0?'disabled':''}>↑</button>
-        <button class="icon-btn" data-a="down" aria-label="Move down" ${i===list.length-1?'disabled':''}>↓</button>
         <button class="icon-btn" data-a="del" aria-label="Delete ${esc(p.title)}">✕</button>
       </div></div>`).join('')+`<div class="row" style="justify-content:flex-end;padding-top:8px"><button class="btn small" id="sortPlan">Sort by time</button></div>`
     :`<div class="empty">No plan items for ${DAY_NAMES[planDay]} yet.</div>`;
@@ -869,13 +895,12 @@ const REC={
 };
 function renderRec(kind){
   const R=REC[kind],arr=S[R.store],el=$(R.list);
+  if(roSync(kind)){el.innerHTML=roRows(kind);return;}
   el.innerHTML=arr.length?arr.map((c,i)=>`<div class="chore-card rec-${kind}" data-id="${c.id}">
     <div class="chore-top">
       <input type="text" value="${esc(c.title)}" data-f="title" placeholder="${R.ph}" aria-label="${R.Noun} name">
       <input type="time" value="${esc(c.time)}" data-f="time" aria-label="Time (optional)">
       <div class="acts">
-        <button class="icon-btn" data-a="up" aria-label="Move ${esc(c.title)} up" title="Move up" ${i===0?'disabled':''}>↑</button>
-        <button class="icon-btn" data-a="down" aria-label="Move ${esc(c.title)} down" title="Move down" ${i===arr.length-1?'disabled':''}>↓</button>
         <button class="icon-btn" data-a="del" aria-label="Delete ${R.noun} ${esc(c.title)}" title="Delete">✕</button>
       </div>
     </div>
@@ -946,12 +971,11 @@ function fmtEdited(ts){const d=new Date(ts),now=new Date();const t=d.toLocaleTim
   return 'Edited '+d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:d.getFullYear()===now.getFullYear()?undefined:'numeric'})+', '+t;}
 function renderNotes(){
   const l=S.notes,el=$('#noteList');
+  if(roSync('note')){el.innerHTML=roRows('note');return;}
   el.innerHTML=l.length?l.map((n,i)=>`<div class="note-card" data-id="${n.id}">
     <div class="note-head">
       <input type="text" value="${esc(n.title)}" data-f="title" placeholder="Title" aria-label="Note title">
       <div class="acts">
-        <button class="icon-btn" data-a="up" aria-label="Move note up" title="Move up" ${i===0?'disabled':''}>↑</button>
-        <button class="icon-btn" data-a="down" aria-label="Move note down" title="Move down" ${i===l.length-1?'disabled':''}>↓</button>
         <button class="icon-btn" data-a="del" aria-label="Delete note ${esc(n.title)}" title="Delete">✕</button>
       </div>
     </div>
@@ -985,15 +1009,13 @@ function fmtDay(ds){const d=parseYmd(ds);return d.toLocaleDateString(undefined,{
 function renderTodos(){
   const open=S.todos.filter(t=>!t.completed),done=S.todos.filter(t=>t.completed).sort((a,b)=>b.completed.localeCompare(a.completed));
   const today=ymd(new Date());
-  $('#todoList').innerHTML=open.length?open.map((t,i)=>`<div class="todo-card" data-id="${t.id}">
+  $('#todoList').innerHTML=roSync('todo')?roRows('todo'):open.length?open.map((t,i)=>`<div class="todo-card" data-id="${t.id}">
       <input type="checkbox" class="chk" data-a="complete" aria-label="Mark ${esc(t.title)} done">
       <div class="fields">
         <input type="text" value="${esc(t.title)}" data-f="title" aria-label="To-do title">
         <input type="text" value="${esc(t.note)}" data-f="note" placeholder="Note (optional)" aria-label="Note">
       </div>
       <div class="acts">
-        <button class="icon-btn" data-a="up" aria-label="Move ${esc(t.title)} up" title="Move up" ${i===0?'disabled':''}>↑</button>
-        <button class="icon-btn" data-a="down" aria-label="Move ${esc(t.title)} down" title="Move down" ${i===open.length-1?'disabled':''}>↓</button>
         <button class="icon-btn" data-a="del" aria-label="Delete ${esc(t.title)}" title="Delete">✕</button>
       </div>
       <div class="note-meta">${t.created>=today?'Added today':`Added ${fmtDay(t.created)} · open ${daysBetween(t.created,today)} day${daysBetween(t.created,today)===1?'':'s'}`}</div>
@@ -1283,7 +1305,6 @@ function renderLogSummary(){const el=$('#logSum'),d=parseYmd(cur),diff=Math.roun
     return `<button type="button" class="lpill${met?' met':''}${ex.water?' wpill':''}" data-logex="${ex.id}" aria-label="${esc(ex.title)}: ${fmtAmt(t)}${ex.target?' of '+fmtAmt(ex.target):''} ${esc(ex.unit||'')}${met?', target reached':''}. Open in Log" data-total="${t}"><i aria-hidden="true"></i><span class="ln">${esc(ex.title)}</span><b>${fmtAmt(t)}${ex.target?' / '+fmtAmt(ex.target):''}</b>${u?`<span class="lu">${esc(u)}</span>`:''}${met?'<span aria-hidden="true" style="color:var(--ok)">✓</span>':''}</button>`;}).join('');}
 $('#logSum').addEventListener('click',e=>{const p=e.target.closest('[data-logex]');if(p){showView('log');const box=$('#view-log').querySelector(`[data-ex="${p.dataset.logex}"]`);if(box){box.scrollIntoView({block:'center'});const f=box.querySelector('.log-in,[data-ql]');f&&f.focus({preventScroll:true});}return;}
   if(e.target.closest('[data-open-log]'))showView('log');});
-let reorderMode=false;
 function renderQuickLog(){const list=S.exercises.filter(x=>x.unit);
   const d=parseYmd(cur),diff=Math.round((d-parseYmd(ymd(new Date())))/864e5);
   $('#logTitle').textContent=diff===0?'Today':diff===1?'Tomorrow':diff===-1?'Yesterday':DAY_NAMES[d.getDay()];
@@ -1293,10 +1314,7 @@ function renderQuickLog(){const list=S.exercises.filter(x=>x.unit);
   renderWater(future);
   $('#qlogCard').hidden=!list.length;$('#logEmpty').hidden=!!list.length;$('#qlogHint').hidden=!list.length;
   $('#qlogHint').textContent=future?'Future day — logging opens on the day':'Add amounts any time — even on days an exercise isn’t scheduled';
-  if(list.length<2)reorderMode=false;const rb=$('#reorderBtn');rb.hidden=list.length<2;rb.setAttribute('aria-pressed',reorderMode);rb.textContent=reorderMode?'✓ Done':'↕ Reorder';
-  $('#qlogCard').classList.toggle('reordering',reorderMode);
-  if(reorderMode){$('#qlogList').innerHTML=list.map((ex,i)=>`<div class="ql-ex ql-mv" data-mv-id="${ex.id}"><div class="ql-head"><span class="ql-name">${esc(ex.title)}</span>
-      <span class="mv-btns"><button type="button" class="icon-btn" data-mv="up" aria-label="Move ${esc(ex.title)} up" title="Move up" ${i===0?'disabled':''}>↑</button><button type="button" class="icon-btn" data-mv="down" aria-label="Move ${esc(ex.title)} down" title="Move down" ${i===list.length-1?'disabled':''}>↓</button></span></div></div>`).join('');return;}
+  if(roSync('log')){$('#qlogList').innerHTML=roRows('log');return;}
   $('#qlogList').innerHTML=list.map(ex=>{const l=dayLog(ex.id,cur);return `<div class="ql-ex" data-ex="${ex.id}">
     <div class="ql-head"><span class="ql-name">${esc(ex.title)}</span>${totalHtml(ex,cur)}${isScheduled(ex,cur)?'':'<span class="ql-sub">not scheduled this day · counts in Stats only</span>'}
       ${l.length?`<button type="button" class="btn small" data-ql="edit" style="margin-left:auto">Edit total</button>`:''}</div>
@@ -1328,12 +1346,6 @@ const logKey=e=>{if(e.key==='Enter'&&e.target.matches('.log-in')){e.preventDefau
 ['#view-today','#view-log'].forEach(v=>{$(v).addEventListener('click',logClick);$(v).addEventListener('keydown',logKey);});
 $('#logPrev').onclick=()=>shift(-1);$('#logNext').onclick=()=>shift(1);$('#logToday').onclick=()=>{flushSave();cur=ymd(new Date());render();};
 $('#logGoEx').onclick=()=>showView('exercise');
-$('#reorderBtn').onclick=()=>{reorderMode=!reorderMode;renderQuickLog();$('#reorderBtn').focus();};
-$('#qlogList').addEventListener('click',e=>{const b=e.target.closest('[data-mv]');if(!b)return;const id=b.closest('[data-mv-id]').dataset.mvId,dir=b.dataset.mv;
-  const l=S.exercises,i=l.findIndex(x=>x.id===id);if(i<0)return;let j=i;do{j+=dir==='up'?-1:1;}while(j>=0&&j<l.length&&!l[j].unit);if(j<0||j>=l.length)return;
-  [l[i],l[j]]=[l[j],l[i]];save();renderQuickLog();
-  const box=$('#qlogList').querySelector(`[data-mv-id="${id}"]`),nb=box.querySelector(`[data-mv="${dir}"]`),fb=box.querySelector(`[data-mv="${dir==='up'?'down':'up'}"]`);((nb&&!nb.disabled)?nb:fb).focus();
-  toast(`Moved ${l[j].title} ${dir}`);});
 
 // ---------- STATS ----------
 let statsPeriod='week',chartDays=7;
