@@ -278,7 +278,7 @@ details.completed[open] summary::before,details.daynote[open] summary::before{tr
 .lpill .ln{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .lpill b{font-variant-numeric:tabular-nums;white-space:nowrap}.lpill.met b{color:var(--ok)}
 .lpill .lu{color:var(--muted);white-space:nowrap}
-.logsum.empty{padding:6px 14px}.logsum .ls-link{background:none;border:0;color:var(--accent-text);font:inherit;font-size:.85rem;font-weight:650;cursor:pointer;min-height:44px;padding:0 6px;text-decoration:underline;text-underline-offset:3px}
+.logsum.empty{padding:6px 14px}.logsum .ls-link,.od-bar .ls-link{background:none;border:0;color:var(--accent-text);font:inherit;font-size:.85rem;font-weight:650;cursor:pointer;min-height:44px;padding:0 6px;text-decoration:underline;text-underline-offset:3px}
 .ql-sub{font-size:.8rem;color:var(--muted)}
 .ql-btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn.preset{min-width:70px;font-size:1.05rem;font-weight:800;border:2px solid color-mix(in srgb,var(--accent-line) 55%,var(--line));background:var(--card)}
@@ -343,7 +343,11 @@ select{appearance:auto}
   .dayhead h1{font-size:1.4rem}
 }
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(90px);background:var(--text);color:var(--bg);padding:12px 20px;border-radius:14px;opacity:0;transition:.25s;z-index:10;font-weight:650;max-width:calc(100vw - 32px)}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast{pointer-events:none}.toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.toast.has-act{display:flex;align-items:center;gap:12px;padding:6px 8px 6px 20px}
+.toast-act{background:transparent;color:var(--bg);border:2px solid currentColor;border-radius:10px;font:inherit;font-weight:800;min-height:44px;padding:0 14px;cursor:pointer}
+.od-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 6px;padding:0 4px;color:var(--chore-text)}
+.od-bar .small{font-weight:650}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 [hidden]{display:none!important}
 </style>
@@ -422,6 +426,7 @@ select{appearance:auto}
       </form>
     </div>
     <div class="card">
+      <div class="od-bar" id="odBar" hidden><span class="small" id="odBarText"></span><button type="button" class="ls-link" id="odDismiss">Dismiss all</button></div>
       <ul class="items" id="itemList" aria-label="Items for this day"></ul>
       <div class="legend"><span class="tag todo">To-Do</span><span class="tag plan">Plan</span><span class="tag chore">Chore</span><span class="tag exercise">Exercise</span><span class="tag task">Task</span></div>
     </div>
@@ -566,6 +571,11 @@ select{appearance:auto}
 
   <!-- DATA -->
   <section id="view-data" role="tabpanel" aria-labelledby="tab-data" hidden>
+    <div class="card" id="overdueCard">
+      <h2>Overdue chores</h2>
+      <p class="muted" style="margin-top:-6px">Clear every rolled-over chore from Today without marking it done. Streaks and past completion stay unchanged, and chores you miss from now on still roll over.</p>
+      <div class="row" style="gap:12px;flex-wrap:wrap;align-items:center"><button type="button" class="btn" id="dismissOverdueBtn" disabled>No overdue chores</button><span class="muted small" id="dismissOverdueInfo"></span></div>
+    </div>
     <div class="card" id="syncCard">
       <h2>Sync &amp; cloud backup</h2>
       <p class="muted" style="margin-top:-6px">Keep your devices in sync and backed up in a secret gist on your own GitHub account.</p>
@@ -677,6 +687,7 @@ function normalize(d){
   out.dayNotes={};if(d.dayNotes&&typeof d.dayNotes==='object')for(const k in d.dayNotes){if(/^\d{4}-\d{2}-\d{2}$/.test(k)&&typeof d.dayNotes[k]==='string'&&d.dayNotes[k])out.dayNotes[k]=d.dayNotes[k];}
   out.tasks=d.tasks&&typeof d.tasks==='object'?d.tasks:{};
   out.done=d.done&&typeof d.done==='object'?d.done:{};
+  if(d.dismissed&&typeof d.dismissed==='object'){out.dismissed={};for(const ds in d.dismissed){if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)||!Array.isArray(d.dismissed[ds]))continue;const l=[...new Set(d.dismissed[ds].filter(x=>typeof x==='string'&&x))];if(l.length)out.dismissed[ds]=l;}}
   const ord={};Object.keys(d).forEach(k=>{if(k in out)ord[k]=out[k];});Object.keys(out).forEach(k=>{if(!(k in ord))ord[k]=out[k];});return ord; // keep the stored key order
 }
 let S;
@@ -697,7 +708,20 @@ function parseYmd(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-
 function fmtTime(t){if(!t)return '';const [h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';return ((h%12)||12)+':'+String(m).padStart(2,'0')+' '+ap;}
 function byTime(a,b){if(!a.time&&!b.time)return 0;if(!a.time)return 1;if(!b.time)return -1;return a.time.localeCompare(b.time);}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);}
+let toastT;function toast(m,action){const t=$('#toast');t.textContent=m;t.classList.toggle('has-act',!!action);
+  if(action){const b=document.createElement('button');b.type='button';b.className='toast-act';b.textContent=action.label;b.onclick=()=>{t.classList.remove('show');clearTimeout(toastT);action.fn();};t.append(' ',b);}
+  t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),action?6000:1800);}
+// ---------- dismiss overdue chores (occurrences are hidden, never marked done) ----------
+function overdueNow(){const td=ymd(new Date());return S.chores.map(c=>({c,dates:missedDates(c,td)})).filter(o=>o.dates.length);}
+function dismissOverdue(){const list=overdueNow();if(!list.length)return;
+  const n=list.length,occ=list.reduce((a,o)=>a+o.dates.length,0);
+  if(!confirm(`Dismiss ${n} overdue chore${n===1?'':'s'} (${occ} missed day${occ===1?'':'s'})?\n\nThey disappear from Today without being marked done — streaks and past completion stay as they are. Chores missed from now on still roll over.`))return;
+  const prev=S.dismissed?JSON.parse(JSON.stringify(S.dismissed)):undefined;S.dismissed=S.dismissed||{};
+  list.forEach(o=>o.dates.forEach(ds=>{const l=S.dismissed[ds]=S.dismissed[ds]||[];if(!l.includes(o.c.id))l.push(o.c.id);}));
+  save();render();renderDismiss();
+  toast(`Dismissed ${n} overdue chore${n===1?'':'s'}`,{label:'Undo',fn:()=>{if(prev)S.dismissed=prev;else delete S.dismissed;save();render();renderDismiss();toast('Overdue chores restored');}});}
+function renderDismiss(){const n=overdueNow().length,b=$('#dismissOverdueBtn');if(!b)return;b.disabled=!n;b.textContent=n?`Dismiss ${n} overdue`:'No overdue chores';
+  $('#dismissOverdueInfo').textContent=n?`${n} chore${n===1?' is':'s are'} rolled over on Today right now.`:'Nothing is rolled over right now.';}
 
 // ---------- theme ----------
 const mq=window.matchMedia('(prefers-color-scheme: dark)');
@@ -744,7 +768,7 @@ function missedDates(c,dateStr){
   const out=[];
   for(const x=new Date(start);ymd(x)<end;x.setDate(x.getDate()+1)){
     const xs=ymd(x);if(c.createdAt&&xs<c.createdAt)continue;
-    if(c.days.includes(x.getDay())&&!(S.done[xs]&&S.done[xs]['chore:'+c.id]))out.push(xs);
+    if(c.days.includes(x.getDay())&&!(S.done[xs]&&S.done[xs]['chore:'+c.id])&&!(S.dismissed&&S.dismissed[xs]&&S.dismissed[xs].includes(c.id)))out.push(xs);
   }
   return out;
 }
@@ -776,6 +800,7 @@ function renderToday(){
   const n=items.length,k=items.filter(i=>i.done).length,pct=n?Math.round(k/n*100):0;
   $('#bar').firstElementChild.style.width=pct+'%';$('#bar').setAttribute('aria-valuenow',pct);
   $('#countText').textContent=`${k} of ${n} done`+(n&&k===n?' — all done! 🎉':'');$('#pctText').textContent=pct+'%';
+  const odN=cur===todayStr?overdueNow().length:0;$('#odBar').hidden=!odN;if(odN)$('#odBarText').textContent=`${odN} overdue chore${odN===1?'':'s'} rolled over`;
   const ul=$('#itemList');
   if(!n){ul.innerHTML='<li class="empty">Nothing planned for this day. Add a task above.</li>';return;}
   ul.innerHTML=items.map(i=>{const cid='c_'+i.key.replace(':','_');return `<li class="k-${i.kind} ${i.overdue?'overdue':''} ${i.done?'done':''}" data-key="${esc(i.key)}">
@@ -1345,6 +1370,7 @@ const logClick=e=>{const box=e.target.closest('[data-ex]');if(!box)return;const 
 const logKey=e=>{if(e.key==='Enter'&&e.target.matches('.log-in')){e.preventDefault();const box=e.target.closest('[data-ex]');box.querySelector('[data-ql="add"]').click();}};
 ['#view-today','#view-log'].forEach(v=>{$(v).addEventListener('click',logClick);$(v).addEventListener('keydown',logKey);});
 $('#logPrev').onclick=()=>shift(-1);$('#logNext').onclick=()=>shift(1);$('#logToday').onclick=()=>{flushSave();cur=ymd(new Date());render();};
+$('#dismissOverdueBtn').onclick=dismissOverdue;$('#odDismiss').onclick=dismissOverdue;
 $('#logGoEx').onclick=()=>showView('exercise');
 
 // ---------- STATS ----------
@@ -1404,7 +1430,7 @@ function renderHabits(today){const start=dataStart(today),rows=[];
 $('#statsPeriod').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;statsPeriod=b.dataset.p;renderStats();});
 $('#chartRange').addEventListener('click',e=>{const b=e.target.closest('[data-n]');if(!b)return;chartDays=+b.dataset.n;renderStats();});
 
-function render(){renderHint();if(view==='today')renderToday();else if(view==='log')renderQuickLog();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();else if(view==='exercise')renderExercises();else if(view==='notes')renderNotes();else if(view==='todo')renderTodos();else if(view==='stats')renderStats();}
+function render(){renderHint();if(view==='data')renderDismiss();if(view==='today')renderToday();else if(view==='log')renderQuickLog();else if(view==='plan')renderPlan();else if(view==='chores')renderChores();else if(view==='exercise')renderExercises();else if(view==='notes')renderNotes();else if(view==='todo')renderTodos();else if(view==='stats')renderStats();}
 // refresh "Today" label if the tab stays open past midnight
 let lastToday=ymd(new Date());setInterval(()=>{const t=ymd(new Date());if(t!==lastToday){if(cur===lastToday)cur=t;lastToday=t;if(view==='today'||view==='log')render();}},60000);
 render();
